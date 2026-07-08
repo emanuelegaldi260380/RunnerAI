@@ -1,0 +1,581 @@
+// RunnerAI - schema database
+// Postgres (Neon in sviluppo/produzione). Driver adapter @prisma/adapter-pg.
+// Nota: manteniamo String al posto di enum (valori documentati) per continuità
+// storica; su Postgres si potrebbero migrare a enum nativi in seguito.
+// I campi "strutturati" usano Json (jsonb su Postgres).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// AUTH (compatibile con NextAuth / Auth.js + credenziali)
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String?
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  profile       AthleteProfile?
+  subscription  Subscription?
+  activities    Activity[]
+  plans         TrainingPlan[]
+  connections   IntegrationConnection[]
+  races         RaceGoal[]
+  offDays       OffDay[]
+  llmConfig     UserLlmConfig?
+  legalAcceptances LegalAcceptance[]
+  sleepRecords     SleepRecord[]
+  dailyMetrics     DailyMetric[]
+  subjectiveLogs   SubjectiveLog[]
+}
+
+// Chiave LLM personale dell'utente (BYOK): usa la propria subscription
+model UserLlmConfig {
+  userId    String   @id
+  // provider: claude | openai | deepseek
+  provider  String
+  apiKeyEnc String   // chiave cifrata (AES-256-GCM)
+  model     String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Giorni in cui l'utente NON è disponibile ad allenarsi (piano dinamico)
+model OffDay {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime // giorno (00:00)
+  reason    String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Token per reset password / verifica email
+model AuthToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  // type: reset | verify
+  type      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// BILLING (Stripe: trial 14gg -> abbonamento mensile)
+// ---------------------------------------------------------------------------
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  stripePriceId        String?
+  // status: trialing | active | past_due | canceled | incomplete | none
+  status               String    @default("trialing")
+  // override tier impostato da admin (trial | basic | pro), bypassa Stripe
+  forcedTier           String?
+  trialEndsAt          DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  // Recesso servizi digitali (art. 59, c.1 lett. o Cod. Consumo): l'utente ha
+  // chiesto l'esecuzione immediata e rinunciato ESPRESSAMENTE al recesso 14gg
+  withdrawalWaived     Boolean   @default(false)
+  withdrawalWaivedAt   DateTime?
+  // Preavviso rinnovo automatico (art. 65-bis Cod. Consumo): almeno 30gg prima
+  renewalNoticeSentAt  DateTime? // quando è stato inviato l'ultimo preavviso
+  renewalNoticeFor     DateTime? // data di rinnovo a cui si riferisce il preavviso
+  // Timestamp dell'ultimo evento Stripe applicato: guardia contro consegne
+  // out-of-order (Stripe non garantisce l'ordine). Eventi più vecchi ignorati.
+  stripeEventAt        DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Registro degli eventi webhook Stripe già elaborati: idempotency contro le
+// consegne duplicate (Stripe garantisce at-least-once, non exactly-once).
+model ProcessedStripeEvent {
+  id        String   @id // event.id di Stripe (evt_...)
+  type      String
+  createdAt DateTime @default(now())
+}
+
+// Registro delle accettazioni legali (accountability GDPR art. 7 §1 +
+// specifica approvazione clausole vessatorie art. 1341-1342 c.c.).
+model LegalAcceptance {
+  id         String   @id @default(cuid())
+  userId     String
+  // docType: terms | privacy | vexatious | withdrawal_waiver | cookie
+  docType    String
+  version    String   // versione del documento accettato (LEGAL_VERSIONS)
+  acceptedAt DateTime @default(now())
+  ip         String?
+  userAgent  String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, docType])
+}
+
+// ---------------------------------------------------------------------------
+// PROFILO ATLETA
+// ---------------------------------------------------------------------------
+
+model AthleteProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  sex            String?  // M | F | other
+  birthDate      DateTime?
+  heightCm       Int?
+  weightKg       Float?
+  restingHr      Int?
+  maxHr          Int?
+  // experience: beginner | intermediate | advanced | elite
+  experience     String?
+  weeklyVolumeKm Float?
+  // Json strutturati
+  goals          Json?    // { raceDistanceKm, targetTimeSec, raceDate, priority }
+  personalBests  Json?    // { "5k": sec, "10k": sec, "half": sec, "marathon": sec }
+  preferences    Json?    // { daysPerWeek, longRunDay, restDays, terrain, ... }
+  // zone di frequenza cardiaca: { z1:[min,max], z2:[min,max], ..., z5:[min,max] }
+  hrZones        Json?
+  injuries       Json?    // storico infortuni/limitazioni
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// ALLENAMENTI REALIZZATI (da screenshot / Garmin / manuale)
+// ---------------------------------------------------------------------------
+
+model Activity {
+  id              String   @id @default(cuid())
+  userId          String
+  // source: SCREENSHOT | GARMIN | STRAVA | MANUAL
+  source          String   @default("SCREENSHOT")
+  externalId      String?  // id attività lato provider (dedup sync)
+  // type: easy | long | tempo | interval | race | recovery | other
+  type            String?
+  date            DateTime
+  distanceKm      Float?
+  durationSec     Int?
+  avgPaceSecPerKm Int?
+  avgHr           Int?
+  maxHr           Int?
+  elevationGainM  Int?
+  calories        Int?
+  cadence         Int?
+  splits          Json?    // [{ km, paceSec, hr, elev }]
+  hrZones         Json?    // { z1..z5 secondi }
+  rawExtract      Json?    // output grezzo estratto dall'LLM vision
+  screenshotPath  String?
+  notes           String?
+  aiRating        String?  // ottimo | buono | sufficiente | scarso
+  aiAssessment    String?  // giudizio di merito dell'AI sull'allenamento svolto
+  aiPlanAdvice    String?  // consiglio dell'AI su come rivedere il piano
+  createdAt       DateTime @default(now())
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plannedWorkout  PlannedWorkout? @relation(fields: [plannedWorkoutId], references: [id])
+  plannedWorkoutId String?        @unique
+  stream          ActivityStream?
+  environment     EnvironmentSnapshot?
+
+  @@index([userId, date])
+}
+
+// ---------------------------------------------------------------------------
+// GARE OBIETTIVO (l'utente indica le gare che vuole fare)
+// ---------------------------------------------------------------------------
+
+model RaceGoal {
+  id            String   @id @default(cuid())
+  userId        String
+  name          String
+  distanceKm    Float
+  raceDate      DateTime?
+  targetTimeSec Int?
+  // priority: A (principale) | B | C
+  priority      String   @default("A")
+  // status: planned | completed | abandoned
+  status        String   @default("planned")
+  notes         String?
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, raceDate])
+}
+
+// ---------------------------------------------------------------------------
+// PIANO DI ALLENAMENTO (generato dal motore multi-LLM)
+// ---------------------------------------------------------------------------
+
+model TrainingPlan {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String?
+  goal        Json?    // obiettivo target del piano
+  startDate   DateTime
+  endDate     DateTime
+  // status: active | draft | completed | archived
+  status      String   @default("active")
+  rationale   String?  // sintesi/razionale del supervisore
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workouts  PlannedWorkout[]
+  proposals PlanProposal[]
+
+  @@index([userId, status])
+}
+
+model PlannedWorkout {
+  id               String   @id @default(cuid())
+  planId           String
+  date             DateTime
+  // type: easy | long | tempo | interval | race | recovery | rest
+  type             String
+  title            String?
+  description      String?
+  targetDistanceKm Float?
+  targetPaceMinSec Int?     // range passo (min) sec/km
+  targetPaceMaxSec Int?
+  targetHrZone     String?
+  structure        Json?    // struttura dettagliata (warmup, reps, recuperi, cooldown)
+  // esercizi/dimostrazioni: [{ name, detail?, reps? }]
+  exercises        Json?
+  completed        Boolean  @default(false)
+  order            Int      @default(0)
+
+  plan     TrainingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  activity Activity?
+
+  @@index([planId, date])
+}
+
+// Traccia le proposte dei due LLM e la decisione del supervisore (audit/trasparenza)
+model PlanProposal {
+  id        String   @id @default(cuid())
+  planId    String
+  // role: PROPOSER_A | PROPOSER_B | SUPERVISOR
+  role      String
+  provider  String   // claude | openai | deepseek
+  model     String
+  content   Json     // proposta o valutazione strutturata
+  createdAt DateTime @default(now())
+
+  plan TrainingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId])
+}
+
+// Libreria comune di immagini illustrative degli esercizi (riuso cross-utente)
+model ExerciseMedia {
+  id          String   @id @default(cuid())
+  name        String   @unique // nome esercizio normalizzato
+  displayName String?
+  imagePath   String   // thumbnail/cover (es. /exercise-images/slug.png)
+  // sequenza di esecuzione: [{ path, caption }]
+  sequence    Json?
+  createdAt   DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// KNOWLEDGE BASE SCIENTIFICA (agente background + RAG)
+// ---------------------------------------------------------------------------
+
+model ScientificSource {
+  id           String   @id @default(cuid())
+  url          String   @unique
+  title        String
+  // sourceType: paper | article | method | guideline | book
+  sourceType   String   @default("article")
+  author       String?
+  publishedAt  DateTime?
+  summary      String?  // sintesi strutturata generata dall'LLM
+  keyPoints    Json?    // punti chiave/insight applicabili all'allenamento
+  content      String?  // testo estratto (troncato)
+  imageUrl     String?  // immagine di anteprima (og:image)
+  // traduzioni: { "en": { "title": "...", "summary": "..." }, ... }
+  translations Json?
+  topics       Json?    // tag/argomenti
+  // embedding salvato come JSON string (in prod: pgvector)
+  embedding    String?
+  qualityScore Float?   // valutazione affidabilità/rilevanza 0-1
+  retrievedAt  DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  @@index([sourceType])
+}
+
+// Registro delle esecuzioni dell'agente scientifico (per non riprocessare)
+model ResearchRun {
+  id          String   @id @default(cuid())
+  query       String
+  foundCount  Int      @default(0)
+  savedCount  Int      @default(0)
+  status      String   @default("completed")
+  startedAt   DateTime @default(now())
+  finishedAt  DateTime?
+}
+
+// ---------------------------------------------------------------------------
+// INTEGRAZIONI (Strava / Garmin) - token CIFRATI a riposo (AES-256-GCM)
+// ---------------------------------------------------------------------------
+
+model IntegrationConnection {
+  id              String    @id @default(cuid())
+  userId          String
+  // provider: strava | garmin
+  provider        String
+  externalUserId  String?   // id atleta lato provider
+  // Token CIFRATI (mai in chiaro nel DB). Vedi src/lib/crypto.ts
+  accessTokenEnc  String
+  refreshTokenEnc String?
+  expiresAt       DateTime?
+  scope           String?
+  // status: connected | expired | revoked | error
+  status          String    @default("connected")
+  lastSyncAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([provider, externalUserId])
+}
+
+// ---------------------------------------------------------------------------
+// MONITORAGGIO CONSUMO TOKEN LLM (admin)
+// ---------------------------------------------------------------------------
+
+model TokenUsage {
+  id               String   @id @default(cuid())
+  provider         String   // claude | openai | deepseek
+  model            String
+  // operation: chat | vision | embedding
+  operation        String
+  userId           String?  // per tracciamento e quote per-utente
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  totalTokens      Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([provider])
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// RASSEGNA STAMPA
+// ---------------------------------------------------------------------------
+
+model PressArticle {
+  id          String   @id @default(cuid())
+  url         String   @unique
+  title       String
+  source      String?
+  // category: elite | marathon | track | trail | science | gear | other
+  category    String   @default("other")
+  summary     String?
+  content     String?  // estratto più lungo per il reader in-app
+  // traduzioni per lingua: { "en": { "summary": "...", "content": "..." }, ... }
+  translations Json?
+  imageUrl    String?
+  publishedAt DateTime?
+  fetchedAt   DateTime @default(now())
+
+  @@index([publishedAt])
+}
+
+// ---------------------------------------------------------------------------
+// FONDAZIONE DATI (Fase 0) — dati fisiologici, stream e ambiente normalizzati.
+// Popolati dal layer di ingestione (es. export garmin-givemydata via bridge).
+// Modello di dominio pulito: la mappatura fine dalle tabelle sorgente avviene
+// nell'ingestione. `raw` conserva il payload grezzo per rielaborazioni future.
+// ---------------------------------------------------------------------------
+
+// Una notte di sonno (per utente, per data).
+model SleepRecord {
+  id           String   @id @default(cuid())
+  userId       String
+  date         DateTime // data della notte (00:00 locale)
+  source       String   @default("garmin")
+  durationSec  Int?
+  deepSec      Int?
+  lightSec     Int?
+  remSec       Int?
+  awakeSec     Int?
+  latencySec   Int?     // tempo di addormentamento
+  efficiency   Float?   // 0-1
+  score        Int?     // 0-100 (sleep score)
+  spo2Avg      Int?
+  spo2Min      Int?
+  respirationAvg Float?
+  hrvOvernight Float?    // HRV media notturna (ms) se disponibile
+  raw          Json?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+// Metriche giornaliere di recupero/benessere (per utente, per data).
+model DailyMetric {
+  id                 String   @id @default(cuid())
+  userId             String
+  date               DateTime // giorno (00:00 locale)
+  source             String   @default("garmin")
+  restingHr          Int?
+  hrv                Float?   // HRV giornaliera (ms)
+  hrvStatus          String?  // balanced | unbalanced | low | poor
+  bodyBatteryHigh    Int?
+  bodyBatteryLow     Int?
+  stressAvg          Int?
+  vo2maxRunning      Float?
+  vo2maxCycling      Float?
+  trainingLoadAcute  Float?   // ATL (7gg)
+  trainingLoadChronic Float?  // CTL (42gg)
+  trainingStatus     String?  // productive | maintaining | overreaching | ...
+  hydrationMl        Int?
+  raw                Json?
+  createdAt          DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+// Stream dettagliato di un'attività (1:1 con Activity). `samples` = serie ~1Hz.
+model ActivityStream {
+  id            String   @id @default(cuid())
+  activityId    String   @unique
+  userId        String
+  // samples: [{ t, lat, lon, altM, paceSec, hr, cadence, powerW }, ...]
+  samples       Json?
+  // sintesi running dynamics (media sull'attività)
+  avgPowerW     Int?
+  avgGctMs      Int?     // ground contact time
+  avgVertOscCm  Float?   // vertical oscillation
+  avgStrideLenM Float?   // stride length
+  sampleCount   Int?
+  raw           Json?
+  createdAt     DateTime @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Condizioni ambientali (1:1 con Activity per lo storico; estendibile a
+// previsioni per le sessioni pianificate — Modulo 3).
+model EnvironmentSnapshot {
+  id          String   @id @default(cuid())
+  activityId  String   @unique
+  userId      String
+  source      String   @default("garmin")
+  tempC       Float?
+  dewPointC   Float?   // conta più della temperatura secca per il runner
+  humidityPct Int?
+  windKph     Float?
+  windDir     String?
+  altitudeM   Int?
+  conditions  String?  // es. "clear", "rain"
+  aqi         Int?
+  uvIndex     Float?
+  capturedAt  DateTime?
+  raw         Json?
+  createdAt   DateTime @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// Log soggettivo post-sessione a bassissimo attrito (Modulo 4). Da raccogliere
+// SUBITO: senza storia la mappatura soggettivo↔oggettivo non ha valore.
+model SubjectiveLog {
+  id             String   @id @default(cuid())
+  userId         String
+  date           DateTime // giorno di riferimento
+  activityId     String?  // eventuale sessione collegata
+  rpe            Int?     // sforzo percepito 1-10
+  legs           Int?     // gambe 1-5 (1 morte, 5 brillanti)
+  sleepPerceived Int?     // sonno percepito 1-5
+  mood           Int?     // umore/stress 1-5
+  niggle         String?  // fastidio/acciacco
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}

@@ -1,0 +1,23 @@
+{
+  "name": "runnerai-agent-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Worker standalone che esegue gli agenti schedulati di RunnerAI",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "once": "tsx src/index.ts run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/node-cron": "^3.0.11",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
+  }
+}

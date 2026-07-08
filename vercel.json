@@ -1,0 +1,9 @@
+{
+  "crons": [
+    { "path": "/api/cron/research", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/press", "schedule": "0 6 * * *" },
+    { "path": "/api/cron/garmin-sync", "schedule": "0 5 * * *" },
+    { "path": "/api/cron/reminders", "schedule": "30 6 * * *" },
+    { "path": "/api/cron/renewal-notice", "schedule": "0 7 * * *" }
+  ]
+}

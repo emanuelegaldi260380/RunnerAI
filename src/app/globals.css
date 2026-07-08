@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --surface: #f6f8fb;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --border: #e6e9ef;
+  --muted: #64748b;
+  --brand: #f9531f; /* arancione energico */
+  --brand-2: #ff8a3d;
+  --brand-fg: #ffffff;
+  --accent: #1e6fff; /* blu sportivo */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-brand-2: var(--brand-2);
+  --color-brand-fg: var(--brand-fg);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, Arial, sans-serif;
+}
+
+/* Fallback di focus visibile da tastiera per tutti gli elementi interattivi
+   che non definiscono un anello proprio (WCAG 2.2 – 2.4.7). Il mouse non lo
+   attiva grazie a :focus-visible. */
+:where(a, button, [role="button"], [role="tab"], summary):focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@layer components {
+  .btn-brand {
+    @apply inline-flex items-center justify-center rounded-full bg-brand px-5 py-2.5 font-semibold text-brand-fg shadow-sm transition hover:brightness-105 hover:shadow-md active:scale-[.98] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-offset-2;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-full border border-border bg-white px-5 py-2.5 font-semibold text-foreground transition hover:bg-surface disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-offset-2;
+  }
+  /* Utility di focus riusabile (WCAG 2.2 – 2.4.7 Focus Visible) */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 focus-visible:ring-offset-2;
+  }
+  /* Skip-link: nascosto finché non riceve focus da tastiera (WCAG 2.4.1) */
+  .skip-link {
+    @apply sr-only;
+  }
+  .skip-link:focus {
+    @apply not-sr-only fixed left-4 top-4 z-[100] rounded-lg bg-brand px-4 py-2 font-semibold text-brand-fg shadow-lg;
+  }
+  .card {
+    @apply rounded-2xl border border-border bg-card p-5 shadow-sm;
+  }
+  .input {
+    @apply w-full rounded-lg border border-border bg-white px-3 py-2 text-foreground outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20;
+  }
+  .label {
+    @apply mb-1 block text-sm font-medium text-muted;
+  }
+  .chip {
+    @apply inline-flex items-center rounded-full bg-brand/10 px-3 py-1 text-sm font-medium text-brand;
+  }
+}
+
+/* utility gradient sportivo */
+.text-gradient {
+  background: linear-gradient(90deg, var(--brand), var(--brand-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Tipografia dei documenti legali (Termini, Privacy, Cookie) */
+.prose-legal {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--foreground);
+}
+.prose-legal h1 {
+  font-size: 1.875rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.prose-legal h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+.prose-legal h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-top: 1.25rem;
+  margin-bottom: 0.35rem;
+}
+.prose-legal p {
+  margin-top: 0.6rem;
+}
+.prose-legal ul,
+.prose-legal ol {
+  margin: 0.6rem 0 0.6rem 1.25rem;
+  list-style: revert;
+}
+.prose-legal li {
+  margin-top: 0.3rem;
+}
+.prose-legal a {
+  color: var(--brand);
+  text-decoration: underline;
+}
+.prose-legal table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.75rem;
+  font-size: 14px;
+}
+.prose-legal th,
+.prose-legal td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  vertical-align: top;
+}
+.prose-legal .lead {
+  color: var(--muted);
+}
