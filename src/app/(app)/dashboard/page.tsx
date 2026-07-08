@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import RunAgentButton from "@/components/RunAgentButton";
 import GeneratePlanButton from "@/components/GeneratePlanButton";
 import SubjectiveLogForm from "@/components/SubjectiveLogForm";
+import PhysiologyTwin from "@/components/PhysiologyTwin";
 import RaceGoals, { type Race } from "@/components/RaceGoals";
 import { isAdminEmail } from "@/lib/admin";
 import { computePersonalBests } from "@/lib/services/personalBests";

@@ -41,6 +41,7 @@ model User {
   sleepRecords     SleepRecord[]
   dailyMetrics     DailyMetric[]
   subjectiveLogs   SubjectiveLog[]
+  physiologyProfile PhysiologyProfile?
 }
 
 // Chiave LLM personale dell'utente (BYOK): usa la propria subscription
@@ -578,4 +579,33 @@ model SubjectiveLog {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, date])
+}
+
+// ---------------------------------------------------------------------------
+// MODULO 2 — Gemello Fisiologico. Profilo derivato "del tuo motore", ricavato
+// dai dati reali (attività, stream, recupero, ambiente). Versionato: si
+// ricalcola periodicamente. Vedi src/lib/services/physiologyProfile.ts.
+// ---------------------------------------------------------------------------
+model PhysiologyProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  computedAt    DateTime @default(now())
+  activitiesUsed Int      @default(0)
+  // Soglia e zone reali (derivate dai TUOI dati, non da %FCmax teorica)
+  maxHr         Int?
+  restingHr     Int?
+  lthr          Int?     // frequenza cardiaca alla soglia (LT2), stimata
+  thresholdPaceSecPerKm Int?
+  hrZones       Json?    // { z1:{min,max}, ... z5 } in bpm
+  // Resistenza aerobica
+  decouplingPct Float?   // decoupling HR/passo medio sui lunghi (%)
+  durabilityPct Float?   // fade del passo (ultimi vs primi terzi) sui lunghi (%)
+  vo2max        Float?
+  // Risposta al caldo: variazione % dell'efficienza (passo a pari HR) per °C di dew point
+  heatSlopePctPerDewC Float?
+  // Sintesi leggibile + dettagli
+  summary       String?
+  raw           Json?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
