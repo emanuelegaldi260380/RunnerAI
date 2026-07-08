@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/components/LangProvider";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 export default function BillingActions({
   configured,
@@ -18,6 +19,7 @@ export default function BillingActions({
   const [loading, setLoading] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   async function openPortal() {
     setLoading(true);
@@ -38,7 +40,6 @@ export default function BillingActions({
   }
 
   async function setCancel(cancel: boolean) {
-    if (cancel && !confirm(tr("bill.cancelConfirm"))) return;
     setCanceling(true);
     setError(null);
     try {
@@ -80,12 +81,26 @@ export default function BillingActions({
         </div>
       ) : (
         <button
-          onClick={() => setCancel(true)}
+          onClick={() => setConfirmCancel(true)}
           disabled={canceling}
           className="btn-ghost text-sm !border-red-300 !text-red-600 hover:!bg-red-50"
         >
           {canceling ? tr("c.redirecting") : tr("bill.cancelBtn")}
         </button>
+      )}
+
+      {confirmCancel && (
+        <ConfirmDialog
+          title={tr("bill.cancelTitle")}
+          body={tr("bill.cancelConfirm")}
+          confirmLabel={tr("bill.cancelBtn")}
+          danger
+          onConfirm={async () => {
+            setConfirmCancel(false);
+            await setCancel(true);
+          }}
+          onClose={() => setConfirmCancel(false)}
+        />
       )}
 
       {/* Gestione metodo di pagamento / fatture (portale Stripe) */}

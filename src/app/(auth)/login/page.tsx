@@ -13,7 +13,10 @@ export default async function LoginPage() {
   return (
     <main className="flex flex-1 items-center justify-center px-6 py-16">
       <div className="w-full max-w-sm">
-        <Link href="/" className="mb-8 block text-center text-xl font-bold">
+        <Link
+          href="/"
+          className="focus-ring mb-8 block rounded-lg text-center text-xl font-bold"
+        >
           Runner<span className="text-brand">AI</span>
         </Link>
         <div className="card">
@@ -33,14 +36,17 @@ export default async function LoginPage() {
 
           <LoginForm />
           <p className="mt-4 text-center text-sm">
-            <Link href="/forgot" className="text-muted hover:text-brand hover:underline">
+            <Link
+              href="/forgot"
+              className="focus-ring rounded text-muted hover:text-brand hover:underline"
+            >
               {tr("login.forgot")}
             </Link>
           </p>
         </div>
         <p className="mt-4 text-center text-sm text-muted">
           {tr("login.noAccount")}{" "}
-          <Link href="/register" className="text-brand hover:underline">
+          <Link href="/register" className="focus-ring rounded text-brand hover:underline">
             {tr("login.registerLink")}
           </Link>
         </p>

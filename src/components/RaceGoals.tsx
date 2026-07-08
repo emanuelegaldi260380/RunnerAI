@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useT } from "@/components/LangProvider";
+import { useT, useLang } from "@/components/LangProvider";
+import { localeOf } from "@/lib/i18n";
 import { nowMs } from "@/lib/time";
 
 export interface Race {
@@ -41,6 +42,7 @@ const PRESETS: [string, number][] = [
 export default function RaceGoals({ races }: { races: Race[] }) {
   const router = useRouter();
   const tt = useT();
+  const lang = useLang();
   const [open, setOpen] = useState(races.length === 0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,14 +66,14 @@ export default function RaceGoals({ races }: { races: Race[] }) {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok) setError(data.error ?? "Errore");
+      if (!res.ok) setError(data.error ?? tt("c.error"));
       else {
         (e.target as HTMLFormElement).reset();
         setOpen(false);
         router.refresh();
       }
     } catch {
-      setError("Errore di rete");
+      setError(tt("c.retry"));
     } finally {
       setSaving(false);
     }
@@ -85,9 +87,9 @@ export default function RaceGoals({ races }: { races: Race[] }) {
   function daysTo(date: string | null): string {
     if (!date) return "";
     const d = Math.ceil((new Date(date).getTime() - nowMs()) / 86400000);
-    if (d < 0) return "conclusa";
-    if (d === 0) return "oggi";
-    return `tra ${d} giorni`;
+    if (d < 0) return tt("r.concluded");
+    if (d === 0) return tt("r.today");
+    return `${tt("r.inDaysPre")} ${d} ${tt("r.inDaysPost")}`;
   }
 
   return (
@@ -123,16 +125,16 @@ export default function RaceGoals({ races }: { races: Race[] }) {
                 <div className="text-xs text-muted">
                   {r.distanceKm} km
                   {r.raceDate &&
-                    ` · ${new Date(r.raceDate).toLocaleDateString("it-IT")} (${daysTo(r.raceDate)})`}
-                  {r.targetTimeSec ? ` · obiettivo ${fmtTime(r.targetTimeSec)}` : ""}
+                    ` · ${new Date(r.raceDate).toLocaleDateString(localeOf[lang])} (${daysTo(r.raceDate)})`}
+                  {r.targetTimeSec ? ` · ${tt("r.goalPrefix")} ${fmtTime(r.targetTimeSec)}` : ""}
                 </div>
               </div>
               <button
                 onClick={() => remove(r.id)}
-                aria-label="Rimuovi"
-                className="text-muted hover:text-red-500"
+                aria-label={tt("r.remove")}
+                className="focus-ring rounded-full p-1 text-muted hover:text-red-500"
               >
-                ✕
+                <span aria-hidden="true">✕</span>
               </button>
             </li>
           ))}
@@ -144,7 +146,7 @@ export default function RaceGoals({ races }: { races: Race[] }) {
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="label">{tt("r.name")}</label>
-              <input name="name" className="input" placeholder="Es. Maratona di Roma" required />
+              <input name="name" className="input" placeholder={tt("r.namePh")} required />
             </div>
             <div>
               <label className="label">{tt("r.distance")}</label>

@@ -6,6 +6,9 @@ import DeleteAccount from "@/components/DeleteAccount";
 import ProfileTabs from "@/components/ProfileTabs";
 import { t as i18nT } from "@/lib/i18n";
 import { getServerLang } from "@/lib/i18n-server";
+import { titleMeta } from "@/lib/pageMeta";
+
+export const generateMetadata = () => titleMeta("an.profile");
 
 export default async function ProfilePage() {
   const session = await auth();

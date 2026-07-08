@@ -3,6 +3,9 @@ import IntegrationsPanel from "@/components/IntegrationsPanel";
 import ApiTokensCard from "@/components/ApiTokensCard";
 import { t as i18nT } from "@/lib/i18n";
 import { getServerLang } from "@/lib/i18n-server";
+import { titleMeta } from "@/lib/pageMeta";
+
+export const generateMetadata = () => titleMeta("an.integrations");
 
 export default async function IntegrationsPage() {
   const lang = await getServerLang();

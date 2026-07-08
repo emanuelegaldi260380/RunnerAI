@@ -5,6 +5,9 @@ import KnowledgeCard from "@/components/KnowledgeCard";
 import { isAdminEmail } from "@/lib/admin";
 import { t as i18nT } from "@/lib/i18n";
 import { getServerLang } from "@/lib/i18n-server";
+import { titleMeta } from "@/lib/pageMeta";
+
+export const generateMetadata = () => titleMeta("an.knowledge");
 
 async function buildUserQuery(userId: string): Promise<string> {
   const [profile, race] = await Promise.all([

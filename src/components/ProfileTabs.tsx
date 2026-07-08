@@ -19,7 +19,8 @@ export default function ProfileTabs() {
           <Link
             key={t.href}
             href={t.href}
-            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition ${
+            aria-current={active ? "page" : undefined}
+            className={`focus-ring -mb-px rounded-t-md border-b-2 px-4 py-2 text-sm font-medium transition ${
               active
                 ? "border-brand text-brand"
                 : "border-transparent text-muted hover:text-foreground"

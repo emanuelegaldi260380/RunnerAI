@@ -10,6 +10,9 @@ import { fmtDate } from "@/lib/format";
 import { isAdminEmail } from "@/lib/admin";
 import { t as i18nT } from "@/lib/i18n";
 import { getServerLang } from "@/lib/i18n-server";
+import { titleMeta } from "@/lib/pageMeta";
+
+export const generateMetadata = () => titleMeta("an.plan");
 import { daysAgo, nowMs } from "@/lib/time";
 
 function startOfWeekMonday(date: Date): Date {

@@ -15,6 +15,9 @@ import {
 } from "@/lib/format";
 import { t } from "@/lib/i18n";
 import { getServerLang } from "@/lib/i18n-server";
+import { titleMeta } from "@/lib/pageMeta";
+
+export const generateMetadata = () => titleMeta("an.activities");
 
 export default async function ActivitiesPage() {
   const session = await auth();
@@ -140,49 +143,98 @@ export default async function ActivitiesPage() {
       {activities.length === 0 ? (
         <div className="card text-muted">{tr("act.empty")}</div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border">
-          <table className="w-full text-sm">
-            <thead className="bg-black/5 text-left text-muted dark:bg-white/5">
-              <tr>
-                <th className="px-4 py-2">{tr("act.thDate")}</th>
-                <th className="px-4 py-2">{tr("act.thType")}</th>
-                <th className="px-4 py-2">{tr("act.thDistance")}</th>
-                <th className="px-4 py-2">{tr("act.thDuration")}</th>
-                <th className="px-4 py-2">{tr("act.thPace")}</th>
-                <th className="px-4 py-2">{tr("act.thAvgHr")}</th>
-                <th className="px-4 py-2">{tr("act.thElevation")}</th>
-                <th className="px-4 py-2">{tr("act.thRating")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {activities.map((a) => (
-                <tr key={a.id} className="border-t border-border">
-                  <td className="px-4 py-2">{fmtDate(a.date)}</td>
-                  <td className="px-4 py-2">{typeLabel(a.type)}</td>
-                  <td className="px-4 py-2">{fmtDistance(a.distanceKm)}</td>
-                  <td className="px-4 py-2">{fmtDuration(a.durationSec)}</td>
-                  <td className="px-4 py-2">{fmtPace(a.avgPaceSecPerKm)}</td>
-                  <td className="px-4 py-2">{a.avgHr ?? "—"}</td>
-                  <td className="px-4 py-2">
-                    {a.elevationGainM != null ? `${a.elevationGainM} m` : "—"}
-                  </td>
-                  <td className="px-4 py-2">
-                    {a.aiRating ? (
-                      <span
-                        title={a.aiAssessment ?? undefined}
-                        className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand"
-                      >
-                        {a.aiRating}
-                      </span>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
+        <>
+          {/* Tabella per schermi ampi */}
+          <div className="hidden overflow-x-auto rounded-xl border border-border md:block">
+            <table className="w-full text-sm">
+              <thead className="bg-black/5 text-left text-muted">
+                <tr>
+                  <th className="px-4 py-2">{tr("act.thDate")}</th>
+                  <th className="px-4 py-2">{tr("act.thType")}</th>
+                  <th className="px-4 py-2">{tr("act.thDistance")}</th>
+                  <th className="px-4 py-2">{tr("act.thDuration")}</th>
+                  <th className="px-4 py-2">{tr("act.thPace")}</th>
+                  <th className="px-4 py-2">{tr("act.thAvgHr")}</th>
+                  <th className="px-4 py-2">{tr("act.thElevation")}</th>
+                  <th className="px-4 py-2">{tr("act.thRating")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {activities.map((a) => (
+                  <tr key={a.id} className="border-t border-border">
+                    <td className="px-4 py-2">{fmtDate(a.date)}</td>
+                    <td className="px-4 py-2">{typeLabel(a.type)}</td>
+                    <td className="px-4 py-2">{fmtDistance(a.distanceKm)}</td>
+                    <td className="px-4 py-2">{fmtDuration(a.durationSec)}</td>
+                    <td className="px-4 py-2">{fmtPace(a.avgPaceSecPerKm)}</td>
+                    <td className="px-4 py-2">{a.avgHr ?? "—"}</td>
+                    <td className="px-4 py-2">
+                      {a.elevationGainM != null ? `${a.elevationGainM} m` : "—"}
+                    </td>
+                    <td className="px-4 py-2">
+                      {a.aiRating ? (
+                        <span
+                          title={a.aiAssessment ?? undefined}
+                          className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand"
+                        >
+                          {a.aiRating}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Card impilate per mobile (evita lo scroll orizzontale) */}
+          <ul className="space-y-3 md:hidden">
+            {activities.map((a) => (
+              <li key={a.id} className="card p-4">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="font-semibold">{typeLabel(a.type)}</span>
+                  <span className="text-xs text-muted">{fmtDate(a.date)}</span>
+                </div>
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-muted">{tr("act.thDistance")}</dt>
+                    <dd className="font-medium">{fmtDistance(a.distanceKm)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-muted">{tr("act.thDuration")}</dt>
+                    <dd className="font-medium">{fmtDuration(a.durationSec)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-muted">{tr("act.thPace")}</dt>
+                    <dd className="font-medium">{fmtPace(a.avgPaceSecPerKm)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-muted">{tr("act.thAvgHr")}</dt>
+                    <dd className="font-medium">{a.avgHr ?? "—"}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-muted">{tr("act.thElevation")}</dt>
+                    <dd className="font-medium">
+                      {a.elevationGainM != null ? `${a.elevationGainM} m` : "—"}
+                    </dd>
+                  </div>
+                  {a.aiRating && (
+                    <div className="flex justify-between gap-2">
+                      <dt className="text-muted">{tr("act.thRating")}</dt>
+                      <dd>
+                        <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand">
+                          {a.aiRating}
+                        </span>
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );

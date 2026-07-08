@@ -8,6 +8,9 @@ import SubscribeButton from "@/components/SubscribeButton";
 import { fmtDate } from "@/lib/format";
 import { t as i18nT } from "@/lib/i18n";
 import { getServerLang } from "@/lib/i18n-server";
+import { titleMeta } from "@/lib/pageMeta";
+
+export const generateMetadata = () => titleMeta("an.billing");
 
 function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
   const pct = Math.min(100, (used / (limit || 1)) * 100);

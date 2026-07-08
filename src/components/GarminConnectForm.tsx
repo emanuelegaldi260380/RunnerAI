@@ -44,13 +44,13 @@ export default function GarminConnectForm() {
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      if (!res.ok) setError(data.error ?? "Errore");
+      if (!res.ok) setError(data.error ?? tr("c.error"));
       else {
         setPassword("");
         router.refresh();
       }
     } catch {
-      setError("Errore di rete");
+      setError(tr("c.retry"));
     } finally {
       setLoading(false);
     }
@@ -60,7 +60,7 @@ export default function GarminConnectForm() {
     <form onSubmit={submit} className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <label className="label">Email Garmin</label>
+          <label className="label">{tr("integ.garminEmail")}</label>
           <input
             type="email"
             className="input"
@@ -71,7 +71,7 @@ export default function GarminConnectForm() {
           />
         </div>
         <div>
-          <label className="label">Password Garmin</label>
+          <label className="label">{tr("integ.garminPassword")}</label>
           <input
             type="password"
             className="input"
@@ -82,11 +82,7 @@ export default function GarminConnectForm() {
           />
         </div>
       </div>
-      <p className="text-xs text-muted">
-        🔒 La password viene cifrata (AES-256-GCM) prima di essere salvata e usata
-        solo per sincronizzare i tuoi allenamenti. Metodo non ufficiale: la
-        verifica in due passaggi (MFA) non è supportata.
-      </p>
+      <p className="text-xs text-muted">{tr("integ.garminNotice")}</p>
       {error && <p className="text-sm text-red-500">{error}</p>}
       {testMsg && (
         <p className={`text-sm ${testMsg.startsWith("✓") ? "text-green-600" : "text-red-500"}`}>
@@ -95,7 +91,7 @@ export default function GarminConnectForm() {
       )}
       <div className="flex flex-wrap gap-3">
         <button type="submit" className="btn-brand" disabled={loading}>
-          {loading ? "Connessione e importazione…" : "Collega Garmin"}
+          {loading ? tr("integ.connecting") : tr("integ.connectGarmin")}
         </button>
         <button
           type="button"
@@ -103,7 +99,7 @@ export default function GarminConnectForm() {
           className="btn-ghost"
           disabled={testing || !email || !password}
         >
-          {testing ? "Test in corso…" : "Testa connessione"}
+          {testing ? tr("integ.testing") : tr("integ.testConn")}
         </button>
       </div>
     </form>

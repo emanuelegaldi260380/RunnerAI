@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useT } from "@/components/LangProvider";
+import Modal from "@/components/Modal";
 
 export default function SubscribeButton({
   tier,
@@ -54,18 +55,7 @@ export default function SubscribeButton({
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
-          <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => !loading && setOpen(false)}
-          />
-          <div
-            className="relative z-10 w-full max-w-md rounded-t-2xl bg-card p-5 shadow-2xl sm:rounded-2xl"
-            role="dialog"
-            aria-modal="true"
-          >
-            <h3 className="text-lg font-bold">{tr("pc.title")}</h3>
-
+        <Modal onClose={() => !loading && setOpen(false)} title={tr("pc.title")}>
             {/* Informazioni precontrattuali (art. 48 Cod. Consumo) */}
             <dl className="mt-3 space-y-2 text-sm">
               <div className="flex justify-between">
@@ -100,9 +90,13 @@ export default function SubscribeButton({
               />
               <span>{tr("pc.waiver")}</span>
             </label>
-            <p className="mt-1 text-[11px] text-muted">{tr("pc.waiverHint")}</p>
+            <p className="mt-1 text-xs text-muted">{tr("pc.waiverHint")}</p>
 
-            {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
+            {error && (
+              <p role="alert" className="mt-2 text-sm text-red-500">
+                {error}
+              </p>
+            )}
 
             <div className="mt-4 flex flex-col gap-2">
               <button onClick={go} disabled={loading} className="btn-brand w-full">
@@ -116,8 +110,7 @@ export default function SubscribeButton({
                 {tr("pc.cancel")}
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </>
   );

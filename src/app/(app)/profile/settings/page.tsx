@@ -7,6 +7,9 @@ import IntegrationsPanel from "@/components/IntegrationsPanel";
 import ByokForm from "@/components/ByokForm";
 import { t as i18nT } from "@/lib/i18n";
 import { getServerLang } from "@/lib/i18n-server";
+import { titleMeta } from "@/lib/pageMeta";
+
+export const generateMetadata = () => titleMeta("prof.tabTechnical");
 
 export default async function ProfileSettingsPage() {
   const session = await auth();

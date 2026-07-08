@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/components/LangProvider";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 export default function IntegrationActions({
   provider,
@@ -19,6 +20,7 @@ export default function IntegrationActions({
   const tr = useT();
   const [loading, setLoading] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [confirmDisc, setConfirmDisc] = useState(false);
 
   async function post(path: string, key: string) {
     setLoading(key);
@@ -108,13 +110,31 @@ export default function IntegrationActions({
         {loading === "test" ? tr("integ.testShort") : tr("integ.testConn")}
       </button>
       <button
-        onClick={() => post(`/api/integrations/${provider}/disconnect`, "disc")}
-        className="btn-ghost"
+        onClick={() => setConfirmDisc(true)}
+        className="btn-ghost !border-red-300 !text-red-600 hover:!bg-red-50"
         disabled={loading !== null}
       >
         {loading === "disc" ? "…" : tr("integ.disconnect")}
       </button>
-      {msg && <span className="text-sm text-muted">{msg}</span>}
+      {msg && (
+        <span className="text-sm text-muted" role="status">
+          {msg}
+        </span>
+      )}
+
+      {confirmDisc && (
+        <ConfirmDialog
+          title={tr("integ.disconnectTitle")}
+          body={tr("integ.disconnectBody")}
+          confirmLabel={tr("integ.disconnect")}
+          danger
+          onConfirm={async () => {
+            setConfirmDisc(false);
+            await post(`/api/integrations/${provider}/disconnect`, "disc");
+          }}
+          onClose={() => setConfirmDisc(false)}
+        />
+      )}
     </div>
   );
 }

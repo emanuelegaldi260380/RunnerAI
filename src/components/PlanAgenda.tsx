@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/components/LangProvider";
+import Modal from "@/components/Modal";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 export interface Exercise {
   name: string;
@@ -83,6 +85,8 @@ export default function PlanAgenda({
   const [selected, setSelected] = useState<WorkoutDTO | null>(null);
   const [seqEx, setSeqEx] = useState<Exercise | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [confirmDelId, setConfirmDelId] = useState<string | null>(null);
   const [done, setDone] = useState<Set<string>>(
     () =>
       new Set(
@@ -92,31 +96,37 @@ export default function PlanAgenda({
 
   async function moveWorkout(id: string, date: string) {
     if (!date) return;
+    setActionError(null);
     try {
-      await fetch(`/api/workouts/${id}`, {
+      const res = await fetch(`/api/workouts/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date }),
       });
+      if (!res.ok) throw new Error();
       setSelected(null);
       router.refresh();
     } catch {
-      /* ignore */
+      setActionError(tr("c.actionErr"));
     }
   }
 
   async function delWorkout(id: string) {
+    setActionError(null);
     try {
-      await fetch(`/api/workouts/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/workouts/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      setConfirmDelId(null);
       setSelected(null);
       router.refresh();
     } catch {
-      /* ignore */
+      setActionError(tr("c.actionErr"));
     }
   }
 
   async function toggleComplete(id: string) {
     const willDone = !done.has(id);
+    setActionError(null);
     setDone((prev) => {
       const n = new Set(prev);
       if (willDone) n.add(id);
@@ -124,32 +134,29 @@ export default function PlanAgenda({
       return n;
     });
     try {
-      await fetch(`/api/workouts/${id}/complete`, {
+      const res = await fetch(`/api/workouts/${id}/complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ completed: willDone }),
       });
+      if (!res.ok) throw new Error();
       router.refresh();
     } catch {
-      /* ignore */
+      // rollback dello stato ottimistico + notifica
+      setDone((prev) => {
+        const n = new Set(prev);
+        if (willDone) n.delete(id);
+        else n.add(id);
+        return n;
+      });
+      setActionError(tr("c.actionErr"));
     }
   }
-
-  useEffect(() => {
-    if (!selected) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setSelected(null);
-    document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [selected]);
 
   async function toggleOff(dateISO: string, e: React.MouseEvent) {
     e.stopPropagation();
     const willOff = !off.has(dateISO);
+    setActionError(null);
     setOff((prev) => {
       const n = new Set(prev);
       if (willOff) n.add(dateISO);
@@ -158,14 +165,22 @@ export default function PlanAgenda({
     });
     setDirty(true);
     try {
-      await fetch("/api/off-days", {
+      const res = await fetch("/api/off-days", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date: dateISO, off: willOff }),
       });
+      if (!res.ok) throw new Error();
       router.refresh();
     } catch {
-      /* rollback silenzioso */
+      // rollback dello stato ottimistico + notifica
+      setOff((prev) => {
+        const n = new Set(prev);
+        if (willOff) n.delete(dateISO);
+        else n.add(dateISO);
+        return n;
+      });
+      setActionError(tr("c.actionErr"));
     }
   }
 
@@ -272,7 +287,7 @@ export default function PlanAgenda({
                       {day.activities.map((a, ai) => (
                         <div
                           key={`a${ai}`}
-                          className="rounded-md bg-green-500/10 px-1.5 py-1 text-[10px] font-medium text-green-700"
+                          className="rounded-md bg-green-500/10 px-1.5 py-1 text-xs font-medium text-green-700"
                         >
                           {tr("pa.done")}{" "}
                           {a.distanceKm != null
@@ -284,16 +299,18 @@ export default function PlanAgenda({
                       ))}
 
                       {!isOff && day.workouts.length === 0 && day.activities.length === 0 && (
-                        <div className="pt-2 text-center text-xs text-muted/40">—</div>
+                        <div aria-hidden="true" className="pt-2 text-center text-xs text-muted">
+                          —
+                        </div>
                       )}
                     </div>
 
                     <button
                       onClick={(e) => toggleOff(day.dateISO, e)}
-                      className={`mt-1.5 rounded-md py-1 text-[11px] transition ${
+                      className={`focus-ring mt-1.5 rounded-md py-1 text-xs transition ${
                         isOff
                           ? "text-brand hover:underline"
-                          : "text-muted/60 hover:bg-black/5 hover:text-muted"
+                          : "text-muted hover:bg-black/5 hover:text-foreground"
                       }`}
                     >
                       {isOff ? tr("pa.cancelOff") : tr("pa.markOff")}
@@ -318,17 +335,7 @@ export default function PlanAgenda({
 
       {/* Overlay dettaglio allenamento */}
       {selected && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 sm:items-center">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelected(null)} />
-          <div className="relative z-10 my-4 w-full max-w-xl rounded-2xl bg-card p-6 shadow-2xl">
-            <button
-              onClick={() => setSelected(null)}
-              aria-label={tr("r.close")}
-              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full hover:bg-black/5"
-            >
-              ✕
-            </button>
-
+        <Modal onClose={() => setSelected(null)} size="lg" labelledById="pa-workout-title">
             <span
               className={`inline-block rounded-full border px-3 py-1 text-xs font-semibold ${
                 typeColors[selected.type] ?? "border-border"
@@ -336,7 +343,9 @@ export default function PlanAgenda({
             >
               {tl(selected.type)}
             </span>
-            <h2 className="mt-2 text-xl font-bold">{selected.title ?? tl(selected.type)}</h2>
+            <h2 id="pa-workout-title" className="mt-2 pr-9 text-xl font-bold">
+              {selected.title ?? tl(selected.type)}
+            </h2>
 
             {(selected.targetDistanceKm != null ||
               selected.targetPaceMinSec != null ||
@@ -384,26 +393,47 @@ export default function PlanAgenda({
                 </button>
               )}
               <div className="flex flex-wrap items-center gap-3 text-sm">
-                <label className="text-muted">{tr("pa.moveTo")}</label>
+                <label htmlFor="pa-move-date" className="text-muted">
+                  {tr("pa.moveTo")}
+                </label>
                 <input
+                  id="pa-move-date"
                   type="date"
                   defaultValue={selected.dateISO}
                   onChange={(e) => moveWorkout(selected.id, e.target.value)}
                   className="input w-auto py-1.5"
                 />
                 <button
-                  onClick={() => delWorkout(selected.id)}
-                  className="ml-auto text-red-500 hover:underline"
+                  onClick={() => {
+                    setConfirmDelId(selected.id);
+                    setSelected(null);
+                  }}
+                  className="focus-ring ml-auto rounded font-medium text-red-500 hover:underline"
                 >
                   {tr("pa.deleteWorkout")}
                 </button>
               </div>
+              {actionError && (
+                <p role="alert" className="text-sm text-red-500">
+                  {actionError}
+                </p>
+              )}
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {seqEx && <SequenceModal ex={seqEx} isAdmin={isAdmin} onClose={() => setSeqEx(null)} />}
+
+      {confirmDelId && (
+        <ConfirmDialog
+          title={tr("pa.deleteTitle")}
+          body={tr("pa.deleteBody")}
+          confirmLabel={tr("pa.deleteConfirm")}
+          danger
+          onConfirm={() => delWorkout(confirmDelId)}
+          onClose={() => setConfirmDelId(null)}
+        />
+      )}
     </>
   );
 }
@@ -534,28 +564,18 @@ function SequenceModal({
   }
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    document.addEventListener("keydown", onKey);
     // load() imposta loading=true in modo sincrono: caricamento iniziale della
     // sequenza al mount / cambio esercizio, voluto.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
-    return () => document.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ex.name]);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto p-4 sm:items-center">
-      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 my-4 w-full max-w-md rounded-2xl bg-card p-6 shadow-2xl">
-        <button
-          onClick={onClose}
-          aria-label={tr("r.close")}
-          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full hover:bg-black/5"
-        >
-          ✕
-        </button>
-        <h3 className="text-lg font-bold">{ex.name}</h3>
+    <Modal onClose={onClose} size="md" labelledById="pa-seq-title">
+        <h3 id="pa-seq-title" className="pr-9 text-lg font-bold">
+          {ex.name}
+        </h3>
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted">{tr("pa.sequence")}</p>
           {isAdmin && !loading && (
@@ -587,7 +607,6 @@ function SequenceModal({
         ) : (
           <p className="mt-4 text-sm text-muted">{tr("pa.noSequence")}</p>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }

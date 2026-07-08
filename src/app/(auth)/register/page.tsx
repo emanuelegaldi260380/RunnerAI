@@ -14,7 +14,10 @@ export default async function RegisterPage() {
   return (
     <main className="flex-1 px-6 py-16">
       <div className="mx-auto w-full max-w-md">
-        <Link href="/" className="mb-8 block text-center text-xl font-bold">
+        <Link
+          href="/"
+          className="focus-ring mb-8 block rounded-lg text-center text-xl font-bold"
+        >
           Runner<span className="text-brand">AI</span>
         </Link>
         <div className="card">
@@ -39,7 +42,7 @@ export default async function RegisterPage() {
         </div>
         <p className="mt-4 text-center text-sm text-muted">
           {tr("reg.haveAccount")}{" "}
-          <Link href="/login" className="text-brand hover:underline">
+          <Link href="/login" className="focus-ring rounded text-brand hover:underline">
             {tr("reg.loginLink")}
           </Link>
         </p>

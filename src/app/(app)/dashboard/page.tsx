@@ -12,6 +12,9 @@ import { computePersonalBests } from "@/lib/services/personalBests";
 import { fmtDate, fmtDistance, fmtDuration, fmtPace, typeLabel } from "@/lib/format";
 import { t } from "@/lib/i18n";
 import { getServerLang } from "@/lib/i18n-server";
+import { titleMeta } from "@/lib/pageMeta";
+
+export const generateMetadata = () => titleMeta("nav.dashboard");
 import { daysAgo } from "@/lib/time";
 
 export default async function DashboardPage() {
@@ -20,8 +23,16 @@ export default async function DashboardPage() {
   const lang = await getServerLang();
   const tt = (k: string) => t(lang, k);
 
-  const [activityCount, lastActivity, plan, kbCount, raceRows, weekKm, profile] =
-    await Promise.all([
+  const [
+    activityCount,
+    lastActivity,
+    plan,
+    kbCount,
+    raceRows,
+    weekKm,
+    profile,
+    integrationCount,
+  ] = await Promise.all([
       db.activity.count({ where: { userId } }),
       db.activity.findFirst({ where: { userId }, orderBy: { date: "desc" } }),
       db.trainingPlan.findFirst({
@@ -39,6 +50,7 @@ export default async function DashboardPage() {
         _sum: { distanceKm: true },
       }),
       db.athleteProfile.findUnique({ where: { userId } }),
+      db.integrationConnection.count({ where: { userId } }),
     ]);
 
   const physiology = await db.physiologyProfile.findUnique({ where: { userId } });
@@ -60,13 +72,24 @@ export default async function DashboardPage() {
       }
     : null;
 
-  const steps = [
+  const steps: {
+    done: boolean;
+    label: string;
+    href: string;
+    optional?: boolean;
+  }[] = [
     { done: !!profile?.experience, label: tt("d.s1"), href: "/profile" },
     { done: raceRows.length > 0, label: tt("d.s2"), href: "/dashboard" },
     { done: activityCount > 0, label: tt("d.s3"), href: "/activities" },
+    {
+      done: integrationCount > 0,
+      label: `${tt("d.sConnect")} (${tt("d.sConnectOpt")})`,
+      href: "/integrations",
+      optional: true,
+    },
     { done: !!plan, label: tt("d.s4"), href: "/plan" },
   ];
-  const onboardingDone = steps.every((s) => s.done);
+  const onboardingDone = steps.filter((s) => !s.optional).every((s) => s.done);
 
   const pbs = await computePersonalBests(userId);
 

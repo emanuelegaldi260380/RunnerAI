@@ -17,7 +17,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RunnerAI — Piani di corsa personalizzati con l'AI",
+  title: {
+    default: "RunnerAI — Piani di corsa personalizzati con l'AI",
+    template: "%s · RunnerAI",
+  },
   description:
     "Carica i tuoi allenamenti Garmin e lascia che tre LLM costruiscano, correggano e ottimizzino il tuo piano di corsa. Con rassegna stampa quotidiana sul running mondiale.",
   manifest: "/manifest.webmanifest",
