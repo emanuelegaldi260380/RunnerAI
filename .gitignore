@@ -62,3 +62,6 @@ next-env.d.ts
 debug.log
 audit_out.json
 /downloaded_files/
+
+# git worktrees create da Claude Code
+/.claude/worktrees/
