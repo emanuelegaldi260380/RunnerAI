@@ -4,6 +4,7 @@ import { getAccessState } from "@/lib/subscription";
 import { syncGarmin } from "@/lib/integrations/garmin";
 import { runWithUser } from "@/lib/requestContext";
 import { getServerLang } from "@/lib/i18n-server";
+import { logger } from "@/lib/logger";
 
 export const maxDuration = 120;
 
@@ -23,8 +24,9 @@ export async function POST() {
     );
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
+    logger.error("Sync Garmin fallito", e);
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "errore" },
+      { error: "Sincronizzazione Garmin fallita. Riprova più tardi." },
       { status: 500 },
     );
   }

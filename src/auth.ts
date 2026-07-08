@@ -6,6 +6,8 @@ import bcrypt from "bcryptjs";
 import { authConfig } from "./auth.config";
 import { db } from "./lib/db";
 import { loginSchema } from "./lib/validation";
+import { rateLimit } from "./lib/rateLimit";
+import { logger } from "./lib/logger";
 import { createTrialSubscription } from "./lib/subscription";
 import { recordAcceptance } from "./lib/legal/acceptance";
 import { LEGAL_VERSIONS } from "./lib/legal/company";
@@ -18,7 +20,9 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      allowDangerousEmailAccountLinking: true,
+      // Niente linking automatico su email uguale: evita che un account
+      // email/password possa essere rivendicato/collegato in modo inatteso.
+      allowDangerousEmailAccountLinking: false,
     }),
   );
 }
@@ -30,16 +34,32 @@ providers.push(
       email: { label: "Email", type: "email" },
       password: { label: "Password", type: "password" },
     },
-    async authorize(credentials) {
+    async authorize(credentials, request) {
       const parsed = loginSchema.safeParse(credentials);
       if (!parsed.success) return null;
       const { email, password } = parsed.data;
+
+      // Anti brute-force / credential stuffing: limita i tentativi per IP e per
+      // email prima di verificare la password (bcrypt da solo non basta).
+      const ip =
+        request?.headers?.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        "anon";
+      const ipOk = await rateLimit(`login-ip:${ip}`, 10, 15 * 60_000);
+      const emailOk = await rateLimit(`login:${email}`, 5, 15 * 60_000);
+      if (!ipOk || !emailOk) {
+        logger.warn(`Login: troppi tentativi (ip=${ip})`);
+        return null;
+      }
 
       const user = await db.user.findUnique({ where: { email } });
       if (!user || !user.passwordHash) return null;
 
       const ok = await bcrypt.compare(password, user.passwordHash);
-      if (!ok) return null;
+      if (!ok) {
+        // Traccia i login falliti per il monitoraggio (A09), senza PII sensibili.
+        logger.warn(`Login fallito per ${email} (ip=${ip})`);
+        return null;
+      }
 
       return { id: user.id, email: user.email, name: user.name };
     },

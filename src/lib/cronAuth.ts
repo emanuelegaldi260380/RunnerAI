@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { isAdminEmail } from "@/lib/admin";
 import { timingSafeEqualStr } from "@/lib/safeCompare";
+import { usableSecret } from "@/lib/env";
 
 /**
  * Autorizza le route "cron" (che consumano token LLM):
@@ -10,7 +11,7 @@ import { timingSafeEqualStr } from "@/lib/safeCompare";
  * periodicamente via cron, per evitare consumo di token a piacimento.
  */
 export async function isCronAuthorized(req: Request): Promise<boolean> {
-  const secret = process.env.CRON_SECRET;
+  const secret = usableSecret(process.env.CRON_SECRET);
   if (secret) {
     const header = req.headers.get("authorization");
     if (header && timingSafeEqualStr(header, `Bearer ${secret}`)) return true;

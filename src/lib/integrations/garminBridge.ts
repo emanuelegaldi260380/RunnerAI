@@ -29,6 +29,14 @@ export async function fetchFromBridge(
   const token = process.env.SERVICE_TOKEN;
   if (!base || !token) throw new Error("Garmin Bridge non configurato (GARMIN_BRIDGE_URL / SERVICE_TOKEN)");
 
+  // La password Garmin in chiaro viaggia verso il bridge: esigi TLS. In sviluppo
+  // si tollera http solo verso localhost (bridge in Docker locale).
+  const bridgeUrl = new URL(base);
+  const isLocal = ["localhost", "127.0.0.1", "::1"].includes(bridgeUrl.hostname);
+  if (bridgeUrl.protocol !== "https:" && !(process.env.NODE_ENV !== "production" && isLocal)) {
+    throw new Error("GARMIN_BRIDGE_URL deve usare https:// (la password Garmin non può transitare in chiaro)");
+  }
+
   const conn = await getConnection(userId, "garmin");
   if (!conn?.externalUserId) throw new Error("Garmin non collegato");
   const { accessToken: password } = readTokens(conn);

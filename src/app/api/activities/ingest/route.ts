@@ -11,6 +11,7 @@ import { assessActivity } from "@/lib/services/assessActivity";
 import { getServerLang } from "@/lib/i18n-server";
 import { runWithUser } from "@/lib/requestContext";
 import { rateLimit } from "@/lib/rateLimit";
+import { logger } from "@/lib/logger";
 import { extractActivityFromImages } from "@/lib/services/ingest";
 import type { ImageInput } from "@/lib/llm/types";
 
@@ -140,12 +141,9 @@ export async function POST(req: Request) {
       extractActivityFromImages(images),
     );
   } catch (e) {
+    logger.error("Estrazione screenshot fallita", e);
     return NextResponse.json(
-      {
-        error:
-          "Estrazione fallita: " +
-          (e instanceof Error ? e.message : "errore sconosciuto"),
-      },
+      { error: "Estrazione fallita. Riprova con screenshot più chiari." },
       { status: 500 },
     );
   }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { getStripe, stripeConfigured } from "@/lib/stripe";
+import { logger } from "@/lib/logger";
 
 /**
  * Disdetta online diretta e immediata (art. 54-bis Cod. Consumo): l'utente può
@@ -35,8 +36,9 @@ export async function POST(req: Request) {
         cancel_at_period_end: cancel,
       });
     } catch (e) {
+      logger.error("Stripe cancel/riattiva fallito", e);
       return NextResponse.json(
-        { error: "Errore nella richiesta a Stripe: " + (e instanceof Error ? e.message : "sconosciuto") },
+        { error: "Errore nella richiesta a Stripe. Riprova più tardi." },
         { status: 502 },
       );
     }

@@ -8,7 +8,11 @@ export const authConfig = {
   pages: {
     signIn: "/login",
   },
-  session: { strategy: "jwt" },
+  // Sessione JWT (stateless): dopo un reset password non è possibile revocare i
+  // token già emessi. Riduciamo la finestra di esposizione da 30gg (default) a
+  // 7gg, con refresh giornaliero. Per una revoca immediata al reset servirebbe
+  // un campo `passwordChangedAt` sull'utente confrontato nel callback jwt.
+  session: { strategy: "jwt", maxAge: 7 * 24 * 60 * 60, updateAge: 24 * 60 * 60 },
   providers: [], // definiti in auth.ts
   callbacks: {
     jwt({ token, user }) {

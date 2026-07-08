@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { getAccessState } from "@/lib/subscription";
 import { rateLimit } from "@/lib/rateLimit";
 import { deepSyncGarmin, garminBridgeConfigured } from "@/lib/integrations/garminBridge";
+import { logger } from "@/lib/logger";
 
 // Il bridge fa browser-automation: può richiedere minuti.
 export const maxDuration = 300;
@@ -43,8 +44,9 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ ok: true, ...result.summary });
   } catch (e) {
+    logger.error("Deep-sync Garmin fallito", e);
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "errore" },
+      { error: "Sincronizzazione avanzata fallita. Riprova più tardi." },
       { status: 500 },
     );
   }

@@ -1,6 +1,10 @@
+import { isPublicHttpUrl } from "@/lib/ssrfGuard";
+
 /** Recupera l'immagine di anteprima (og:image / twitter:image) da una pagina web. */
 export async function fetchOgImage(url: string): Promise<string | null> {
   if (!url.startsWith("http")) return null;
+  // Anti-SSRF: non fetchare URL che risolvono a IP interni/riservati.
+  if (!(await isPublicHttpUrl(url))) return null;
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 6000);

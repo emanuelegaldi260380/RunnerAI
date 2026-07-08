@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { db } from "@/lib/db";
 import { getStripe } from "@/lib/stripe";
+import { logger } from "@/lib/logger";
 
 // Stripe richiede il body raw per la verifica della firma
 export const runtime = "nodejs";
@@ -23,10 +24,8 @@ export async function POST(req: Request) {
   try {
     event = stripe.webhooks.constructEvent(body, sig, secret);
   } catch (e) {
-    return NextResponse.json(
-      { error: `Firma non valida: ${e instanceof Error ? e.message : ""}` },
-      { status: 400 },
-    );
+    logger.warn("Stripe webhook: firma non valida", e);
+    return NextResponse.json({ error: "Firma non valida" }, { status: 400 });
   }
 
   // Idempotency: Stripe consegna at-least-once. Se l'evento è già stato
@@ -91,10 +90,8 @@ export async function POST(req: Request) {
     // Handler fallito: rimuovi il marcatore di idempotency così Stripe può
     // riconsegnare l'evento e ritentare (altrimenti resterebbe perso).
     await db.processedStripeEvent.delete({ where: { id: event.id } }).catch(() => {});
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : "errore handler" },
-      { status: 500 },
-    );
+    logger.error(`Stripe webhook handler fallito (${event.type})`, e);
+    return NextResponse.json({ error: "Errore handler" }, { status: 500 });
   }
 
   return NextResponse.json({ received: true });

@@ -7,6 +7,7 @@ import { generatePlan } from "@/lib/services/planEngine";
 import { runWithUser } from "@/lib/requestContext";
 import { rateLimit } from "@/lib/rateLimit";
 import { getServerLang } from "@/lib/i18n-server";
+import { logger } from "@/lib/logger";
 
 // la generazione può richiedere tempo (3 chiamate LLM)
 export const maxDuration = 120;
@@ -70,12 +71,9 @@ export async function POST(req: Request) {
     );
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
+    logger.error("Generazione piano fallita", e);
     return NextResponse.json(
-      {
-        error:
-          "Generazione fallita: " +
-          (e instanceof Error ? e.message : "errore sconosciuto"),
-      },
+      { error: "Generazione fallita. Riprova più tardi." },
       { status: 500 },
     );
   }

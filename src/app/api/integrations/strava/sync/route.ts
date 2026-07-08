@@ -4,6 +4,7 @@ import { getAccessState } from "@/lib/subscription";
 import { syncStrava } from "@/lib/integrations/strava";
 import { runWithUser } from "@/lib/requestContext";
 import { getServerLang } from "@/lib/i18n-server";
+import { logger } from "@/lib/logger";
 
 export const maxDuration = 120;
 
@@ -23,8 +24,9 @@ export async function POST() {
     );
     return NextResponse.json({ ok: true, ...result });
   } catch (e) {
+    logger.error("Sync Strava fallito", e);
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "errore" },
+      { error: "Sincronizzazione Strava fallita. Riprova più tardi." },
       { status: 500 },
     );
   }

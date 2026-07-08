@@ -13,10 +13,14 @@ export async function sendEmail(opts: {
   const from = process.env.EMAIL_FROM || "RunnerAI <onboarding@resend.dev>";
 
   if (!key) {
-    logger.info(
-      `[email:dev] to=${opts.to} subject="${opts.subject}"\n` +
-        opts.html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 600),
-    );
+    // In produzione un provider email non configurato è un errore: senza invio,
+    // link di verifica/reset non arrivano. NON logghiamo mai il corpo (contiene
+    // token di reset/verifica): finirebbero nei log applicativi (CWE-532).
+    if (process.env.NODE_ENV === "production") {
+      logger.error(`Invio email non configurato (RESEND_API_KEY assente): to=${opts.to}`);
+      return false;
+    }
+    logger.info(`[email:dev] to=${opts.to} subject="${opts.subject}" (corpo non loggato)`);
     return true;
   }
 

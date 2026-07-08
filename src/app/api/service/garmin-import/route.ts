@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { isServiceAuthorized } from "@/lib/serviceAuth";
 import { ingestGarminTables, type GarminTables } from "@/lib/services/garminImport";
+import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 export const maxDuration = 120;
 
@@ -19,13 +21,17 @@ export async function POST(req: Request) {
   if (!userId || !tables) {
     return NextResponse.json({ error: "userId e tables richiesti" }, { status: 400 });
   }
+  // Difesa in profondità: anche con SERVICE_TOKEN valido, non scrivere dati per
+  // un userId inesistente (previene ingestione verso id arbitrari/typo).
+  const user = await db.user.findUnique({ where: { id: userId }, select: { id: true } });
+  if (!user) {
+    return NextResponse.json({ error: "utente inesistente" }, { status: 404 });
+  }
   try {
     const summary = await ingestGarminTables(userId, tables);
     return NextResponse.json({ ok: true, ...summary });
   } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : "errore" },
-      { status: 500 },
-    );
+    logger.error("garmin-import fallito", e);
+    return NextResponse.json({ error: "Ingestione fallita" }, { status: 500 });
   }
 }

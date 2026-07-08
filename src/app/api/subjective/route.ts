@@ -20,11 +20,22 @@ export async function POST(req: Request) {
   const d = parsed.data;
   const date = d.date ? new Date(d.date) : new Date();
 
+  // Anti-IDOR: collega solo attività di proprietà dell'utente; se l'activityId
+  // non è suo (o non esiste) lo scartiamo invece di salvare un riferimento altrui.
+  let activityId: string | null = null;
+  if (d.activityId) {
+    const owned = await db.activity.findFirst({
+      where: { id: d.activityId, userId: session.user.id },
+      select: { id: true },
+    });
+    activityId = owned?.id ?? null;
+  }
+
   const log = await db.subjectiveLog.create({
     data: {
       userId: session.user.id,
       date,
-      activityId: d.activityId ?? null,
+      activityId,
       rpe: d.rpe ?? null,
       legs: d.legs ?? null,
       sleepPerceived: d.sleepPerceived ?? null,

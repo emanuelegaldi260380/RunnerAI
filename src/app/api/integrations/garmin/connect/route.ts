@@ -4,6 +4,7 @@ import { encryptionConfigured } from "@/lib/crypto";
 import { connectGarmin, syncGarmin } from "@/lib/integrations/garmin";
 import { runWithUser } from "@/lib/requestContext";
 import { getServerLang } from "@/lib/i18n-server";
+import { rateLimit } from "@/lib/rateLimit";
 
 export const maxDuration = 120;
 
@@ -11,6 +12,13 @@ export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Non autenticato" }, { status: 401 });
+  }
+  // Anti-oracolo credenziali / login costosi ripetuti.
+  if (!(await rateLimit(`garmin-connect:${session.user.id}`, 5, 15 * 60_000))) {
+    return NextResponse.json(
+      { error: "Troppi tentativi. Riprova più tardi." },
+      { status: 429 },
+    );
   }
   if (!encryptionConfigured()) {
     return NextResponse.json(
