@@ -2,6 +2,10 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import UploadActivity from "@/components/UploadActivity";
 import ActivityCharts, { type ActivityPoint } from "@/components/ActivityCharts";
+import AutopsyPanel, {
+  type AutopsyCandidate,
+  type AutopsyDTO,
+} from "@/components/AutopsyPanel";
 import {
   fmtDate,
   fmtDistance,
@@ -23,6 +27,45 @@ export default async function ActivitiesPage() {
   });
 
   const assessed = activities.filter((a) => a.aiAssessment).slice(0, 5);
+
+  // Autopsia (Modulo 1): candidate = gare e sedute chiave/lunghe con dati sufficienti.
+  const candidateActivities = activities
+    .filter(
+      (a) =>
+        a.type === "race" ||
+        (a.durationSec ?? 0) >= 40 * 60 ||
+        (a.distanceKm ?? 0) >= 10,
+    )
+    .slice(0, 15);
+  const autopsies = candidateActivities.length
+    ? await db.performanceAutopsy.findMany({
+        where: {
+          userId: session!.user.id,
+          activityId: { in: candidateActivities.map((a) => a.id) },
+        },
+      })
+    : [];
+  const autopsyByActivity = new Map(autopsies.map((a) => [a.activityId, a]));
+  const autopsyCandidates: AutopsyCandidate[] = candidateActivities.map((a) => {
+    const row = autopsyByActivity.get(a.id);
+    return {
+      id: a.id,
+      label: `${fmtDate(a.date)} · ${typeLabel(a.type)} · ${fmtDistance(a.distanceKm)}`,
+      autopsy: row
+        ? ({
+            headline: row.headline,
+            summary: row.summary,
+            pacingAnalysis: row.pacingAnalysis,
+            lessons: (row.lessons as string[] | null) ?? null,
+            executionScore: row.executionScore,
+            positiveSplitPct: row.positiveSplitPct,
+            fadePct: row.fadePct,
+            hrDriftPct: row.hrDriftPct,
+            paceCvPct: row.paceCvPct,
+          } satisfies AutopsyDTO)
+        : null,
+    };
+  });
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -48,6 +91,13 @@ export default async function ActivitiesPage() {
               calories: a.calories,
             }))}
           />
+        </div>
+      )}
+
+      {/* Autopsia post-performance (Modulo 1) */}
+      {autopsyCandidates.length > 0 && (
+        <div className="mb-8">
+          <AutopsyPanel candidates={autopsyCandidates} />
         </div>
       )}
 

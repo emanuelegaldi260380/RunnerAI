@@ -44,6 +44,19 @@ export default async function PlanPage() {
   const offDays = offRows.map((o) => isoDay(o.date));
   const todayISO = isoDay(new Date());
 
+  // Secondo parere avversariale (Modulo 6): proposta persistita con role CRITIC.
+  interface PlanCritiqueDTO {
+    verdict?: string;
+    soundnessScore?: number | null;
+    risks?: string[];
+    strengths?: string[];
+    adjustments?: string[];
+  }
+  const criticProposal = plan?.proposals.find((p) => p.role === "CRITIC");
+  const critique =
+    (criticProposal?.content as unknown as PlanCritiqueDTO | undefined) ?? null;
+  const roleChips = (plan?.proposals ?? []).filter((p) => p.role !== "CRITIC");
+
   // aderenza: quota di allenamenti (non-riposo) già scaduti e completati
   let adherence: { done: number; due: number; pct: number } | null = null;
   if (plan) {
@@ -161,7 +174,7 @@ export default async function PlanPage() {
             </p>
           )}
           <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
-            {plan.proposals.map((p) => (
+            {roleChips.map((p) => (
               <span key={p.id} className="rounded-full border border-border px-2 py-1">
                 {p.role === "SUPERVISOR"
                   ? tr("plan.supervisor")
@@ -174,6 +187,64 @@ export default async function PlanPage() {
         </div>
       ) : (
         <div className="card mb-6 text-muted">{tr("plan.noPlan")}</div>
+      )}
+
+      {critique && (critique.verdict || (critique.risks?.length ?? 0) > 0) && (
+        <div className="card mb-6 border-orange-500/30">
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold">{tr("critic.title")}</h2>
+            {typeof critique.soundnessScore === "number" && (
+              <span className="rounded-full bg-orange-500/10 px-2.5 py-0.5 text-xs font-semibold text-orange-600">
+                {tr("critic.score")}: {critique.soundnessScore}/100
+              </span>
+            )}
+          </div>
+          <p className="mb-3 text-sm text-muted">{tr("critic.desc")}</p>
+          {critique.verdict && (
+            <p className="mb-3 rounded-lg bg-orange-500/5 p-3 text-sm">
+              <span className="font-medium">{tr("critic.verdict")}: </span>
+              {critique.verdict}
+            </p>
+          )}
+          <div className="grid gap-4 sm:grid-cols-3">
+            {(critique.risks?.length ?? 0) > 0 && (
+              <div>
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-orange-600">
+                  {tr("critic.risks")}
+                </div>
+                <ul className="list-disc space-y-1 pl-5 text-sm">
+                  {critique.risks!.map((r, i) => (
+                    <li key={i}>{r}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {(critique.adjustments?.length ?? 0) > 0 && (
+              <div>
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">
+                  {tr("critic.adjustments")}
+                </div>
+                <ul className="list-disc space-y-1 pl-5 text-sm">
+                  {critique.adjustments!.map((a, i) => (
+                    <li key={i}>{a}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {(critique.strengths?.length ?? 0) > 0 && (
+              <div>
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-green-600">
+                  {tr("critic.strengths")}
+                </div>
+                <ul className="list-disc space-y-1 pl-5 text-sm">
+                  {critique.strengths!.map((s, i) => (
+                    <li key={i}>{s}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       <PlanAgenda

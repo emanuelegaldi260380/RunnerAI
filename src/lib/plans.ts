@@ -4,15 +4,22 @@ export type TierId = "trial" | "basic" | "pro" | "none";
 
 export interface Tier {
   id: TierId;
+  /** nome in italiano (fallback interno / messaggi server non localizzati) */
   name: string;
+  /** prezzo in italiano (fallback interno) */
   priceLabel: string;
+  /** chiave i18n del nome piano (per la UI localizzata) */
+  nameKey: string;
+  /** chiave i18n del prezzo (per la UI localizzata) */
+  priceKey: string;
   /** limite mensile di generazioni/aggiornamenti del piano (richieste AI intensive) */
   monthlyPlans: number;
   /** limite mensile di analisi screenshot */
   monthlyIngests: number;
   /** numero massimo di LLM utilizzabili per generare il piano */
   maxLlms: number;
-  features: string[];
+  /** chiavi i18n delle caratteristiche (in ordine); le prime 2 sono i conteggi piani/analisi */
+  featureKeys: string[];
   /** env che contiene lo Stripe price id (per basic/pro) */
   priceEnv?: string;
 }
@@ -22,28 +29,28 @@ export const TIERS: Record<Exclude<TierId, "none">, Tier> = {
     id: "trial",
     name: "Prova",
     priceLabel: "Gratis · 14 giorni",
+    nameKey: "tier.trial.name",
+    priceKey: "tier.trial.price",
     // free trial più limitato: assaggio del prodotto
     monthlyPlans: 2,
     monthlyIngests: 8,
     maxLlms: 1,
-    features: [
-      "2 generazioni piano (in 14 giorni)",
-      "8 analisi allenamento",
-      "1 LLM per il piano",
-    ],
+    featureKeys: ["tier.trial.f1", "tier.trial.f2", "tier.trial.f3"],
   },
   basic: {
     id: "basic",
     name: "Base",
     priceLabel: "€9,99 / mese",
+    nameKey: "tier.basic.name",
+    priceKey: "tier.basic.price",
     monthlyPlans: 8,
     monthlyIngests: 60,
     maxLlms: 2,
-    features: [
-      "8 generazioni/aggiornamenti piano al mese",
-      "60 analisi allenamento al mese",
-      "Fino a 2 LLM (proposta + revisione)",
-      "Integrazioni Garmin/Strava",
+    featureKeys: [
+      "tier.basic.f1",
+      "tier.basic.f2",
+      "tier.basic.f3",
+      "tier.basic.f4",
     ],
     priceEnv: "STRIPE_PRICE_ID",
   },
@@ -51,15 +58,17 @@ export const TIERS: Record<Exclude<TierId, "none">, Tier> = {
     id: "pro",
     name: "Pro",
     priceLabel: "€24,99 / mese",
+    nameKey: "tier.pro.name",
+    priceKey: "tier.pro.price",
     monthlyPlans: 40,
     monthlyIngests: 300,
     maxLlms: 3,
-    features: [
-      "40 generazioni/aggiornamenti piano al mese",
-      "300 analisi allenamento al mese",
-      "Fino a 3 LLM (2 propongono + supervisore)",
-      "BYOK: usa la tua chiave AI → piani illimitati",
-      "Priorità e limiti estesi",
+    featureKeys: [
+      "tier.pro.f1",
+      "tier.pro.f2",
+      "tier.pro.f3",
+      "tier.pro.f4",
+      "tier.pro.f5",
     ],
     priceEnv: "STRIPE_PRICE_ID_PRO",
   },

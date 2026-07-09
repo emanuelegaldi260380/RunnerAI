@@ -13,6 +13,7 @@ import { runWithUser } from "@/lib/requestContext";
 import { rateLimit } from "@/lib/rateLimit";
 import { logger } from "@/lib/logger";
 import { extractActivityFromImages } from "@/lib/services/ingest";
+import { storageConfigured, putObject } from "@/lib/storage";
 import type { ImageInput } from "@/lib/llm/types";
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
@@ -123,8 +124,20 @@ export async function POST(req: Request) {
     }
     images.push({ base64: buf.toString("base64"), mediaType });
 
-    if (canPersist) {
-      const fname = `${crypto.randomUUID()}${extFor(mediaType)}`;
+    const fname = `${crypto.randomUUID()}${extFor(mediaType)}`;
+    // In produzione: storage oggetti S3-compatibile. In sviluppo: filesystem locale.
+    if (storageConfigured()) {
+      try {
+        const url = await putObject(
+          `screenshots/${session.user.id}/${fname}`,
+          buf,
+          mediaType,
+        );
+        savedPaths.push(url);
+      } catch (e) {
+        logger.warn("Upload screenshot su storage fallito", e);
+      }
+    } else if (canPersist) {
       const rel = path.join(session.user.id, fname);
       try {
         await fs.writeFile(path.join(UPLOAD_DIR, rel), buf);

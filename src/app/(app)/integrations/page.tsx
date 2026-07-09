@@ -1,5 +1,6 @@
 import Link from "next/link";
 import IntegrationsPanel from "@/components/IntegrationsPanel";
+import ApiTokensCard from "@/components/ApiTokensCard";
 import { t as i18nT } from "@/lib/i18n";
 import { getServerLang } from "@/lib/i18n-server";
 
@@ -17,6 +18,11 @@ export default async function IntegrationsPage() {
         .
       </p>
       <IntegrationsPanel />
+
+      {/* Token API personali per il server MCP (Modulo 5) */}
+      <div className="mt-6">
+        <ApiTokensCard />
+      </div>
     </div>
   );
 }

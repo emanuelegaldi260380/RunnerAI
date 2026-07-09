@@ -41,6 +41,9 @@ model User {
   sleepRecords     SleepRecord[]
   dailyMetrics     DailyMetric[]
   subjectiveLogs   SubjectiveLog[]
+  physiology       PhysiologyProfile?
+  autopsies        PerformanceAutopsy[]
+  apiTokens        ApiToken[]
 }
 
 // Chiave LLM personale dell'utente (BYOK): usa la propria subscription
@@ -242,6 +245,7 @@ model Activity {
   plannedWorkoutId String?        @unique
   stream          ActivityStream?
   environment     EnvironmentSnapshot?
+  autopsy         PerformanceAutopsy?
 
   @@index([userId, date])
 }
@@ -578,4 +582,90 @@ model SubjectiveLog {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, date])
+}
+
+// ---------------------------------------------------------------------------
+// GEMELLO FISIOLOGICO (Modulo 2): profilo derivato dai dati reali dell'atleta.
+// Non è inserito dall'utente: è ricalcolato dai dati Garmin (attività, stream,
+// metriche giornaliere, sonno, ambiente). Aggiornato a ogni deep-sync.
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// AUTOPSIA POST-PERFORMANCE (Modulo 1): analisi approfondita di una gara o
+// seduta chiave. Metriche oggettive calcolate dai dati (pura matematica) +
+// giudizio tecnico dell'AI su esecuzione, pacing, cedimenti e lezioni.
+// 1:1 con l'attività analizzata (rigenerabile su richiesta).
+// ---------------------------------------------------------------------------
+model PerformanceAutopsy {
+  id             String   @id @default(cuid())
+  userId         String
+  activityId     String   @unique
+  headline       String?  // verdetto sintetico in una frase
+  summary        String?  // analisi discorsiva (cosa è andato, cosa no)
+  pacingAnalysis String?  // lettura del pacing/negative-positive split
+  lessons        Json?    // string[]: lezioni operative per i prossimi blocchi
+  executionScore Int?     // 0-100: qualità di esecuzione stimata dall'AI
+  // Metriche oggettive (calcolate dagli split, indipendenti dall'LLM)
+  positiveSplitPct Float? // % differenza passo 2ª metà vs 1ª (>0 = rallenta)
+  fadePct          Float? // % degrado passo nell'ultimo quarto vs primo
+  hrDriftPct       Float? // decoupling Pa:Hr sull'intera prova
+  paceCvPct        Float? // coefficiente di variazione del passo (regolarità)
+  metrics          Json?  // valori intermedi/diagnostici
+  lang           String   @default("it")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// TOKEN API PERSONALI (Modulo 5): consentono al server MCP personale (o ad
+// altri client dell'utente) di leggere il proprio contesto di allenamento.
+// Il token in chiaro è mostrato UNA sola volta; nel DB vive solo l'hash SHA-256.
+// ---------------------------------------------------------------------------
+model ApiToken {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String    // etichetta scelta dall'utente (es. "MacBook - Claude")
+  tokenHash  String    @unique // SHA-256 esadecimale del token
+  prefix     String    // primi caratteri (per riconoscerlo nell'elenco)
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PhysiologyProfile {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  // Soglia (LT2): FC e passo di soglia stimati dagli sforzi sostenuti reali
+  lthrBpm              Int?     // FC di soglia (lactate threshold HR, proxy LT2)
+  thresholdPaceSecPerKm Int?    // passo di soglia (sec/km)
+  maxHrEst             Int?     // FC max osservata/stimata
+  restingHrEst         Int?     // FC a riposo (mediana metriche giornaliere)
+  vo2max               Float?   // ultimo VO2max running da Garmin
+  // Zone FC calcolate sulla LTHR (Friel): { z1..z5: { min, max } }
+  hrZones              Json?
+  // Decoupling aerobico (Pa:Hr drift) mediano sugli sforzi lunghi/steady, %
+  decouplingPct        Float?
+  // Durabilità: degrado passo/FC nella parte finale dei lunghi, % (più basso = meglio)
+  durabilityPct        Float?
+  // Sensibilità al caldo: sec/km aggiunti per °C di dew point sopra la baseline
+  heatSecPerKmPerC     Float?
+  // HRV di baseline (mediana notturna/giornaliera, ms)
+  baselineHrvMs        Float?
+  // metadati di affidabilità
+  sampleActivities     Int?     // n. attività usate nel calcolo
+  confidence           String?  // low | medium | high
+  notes                String?  // sintesi testuale generata
+  raw                  Json?    // valori intermedi/diagnostici
+  computedAt           DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

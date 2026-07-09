@@ -1,5 +1,6 @@
 import { getConnection, readTokens } from "./tokens";
 import { ingestGarminTables, type GarminTables, type ImportSummary } from "@/lib/services/garminImport";
+import { computePhysiologyProfile } from "@/lib/services/physiology";
 import { db } from "@/lib/db";
 
 // ---------------------------------------------------------------------------
@@ -66,5 +67,7 @@ export async function deepSyncGarmin(
     where: { userId, provider: "garmin" },
     data: { lastSyncAt: new Date(), status: "connected" },
   });
+  // Ricalcola il gemello fisiologico sui dati appena importati (best-effort).
+  await computePhysiologyProfile(userId).catch(() => null);
   return { summary };
 }

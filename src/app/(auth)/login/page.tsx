@@ -1,8 +1,12 @@
 import Link from "next/link";
 import GoogleButton from "@/components/GoogleButton";
 import LoginForm from "@/components/LoginForm";
+import { t as i18nT } from "@/lib/i18n";
+import { getServerLang } from "@/lib/i18n-server";
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const lang = await getServerLang();
+  const tr = (k: string) => i18nT(lang, k);
   const googleEnabled =
     !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET;
 
@@ -13,15 +17,15 @@ export default function LoginPage() {
           Runner<span className="text-brand">AI</span>
         </Link>
         <div className="card">
-          <h1 className="mb-1 text-2xl font-bold">Accedi</h1>
-          <p className="mb-6 text-sm text-muted">Bentornato, corridore.</p>
+          <h1 className="mb-1 text-2xl font-bold">{tr("login.title")}</h1>
+          <p className="mb-6 text-sm text-muted">{tr("login.subtitle")}</p>
 
           {googleEnabled && (
             <>
-              <GoogleButton label="Accedi con Google" />
+              <GoogleButton label={tr("login.withGoogle")} />
               <div className="my-5 flex items-center gap-3 text-xs text-muted">
                 <span className="h-px flex-1 bg-border" />
-                oppure con email
+                {tr("auth.orEmail")}
                 <span className="h-px flex-1 bg-border" />
               </div>
             </>
@@ -30,14 +34,14 @@ export default function LoginPage() {
           <LoginForm />
           <p className="mt-4 text-center text-sm">
             <Link href="/forgot" className="text-muted hover:text-brand hover:underline">
-              Password dimenticata?
+              {tr("login.forgot")}
             </Link>
           </p>
         </div>
         <p className="mt-4 text-center text-sm text-muted">
-          Non hai un account?{" "}
+          {tr("login.noAccount")}{" "}
           <Link href="/register" className="text-brand hover:underline">
-            Registrati
+            {tr("login.registerLink")}
           </Link>
         </p>
       </div>

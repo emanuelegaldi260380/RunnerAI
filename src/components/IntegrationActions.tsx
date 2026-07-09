@@ -8,10 +8,12 @@ export default function IntegrationActions({
   provider,
   connected,
   canSync,
+  canDeepSync = false,
 }: {
   provider: "strava" | "garmin";
   connected: boolean;
   canSync: boolean;
+  canDeepSync?: boolean;
 }) {
   const router = useRouter();
   const tr = useT();
@@ -38,6 +40,37 @@ export default function IntegrationActions({
     }
   }
 
+  // Sync avanzato (deep-sync): estrae dati ricchi via bridge. Risposta = ImportSummary,
+  // può richiedere minuti e segnalare la necessità di un login supervisionato (MFA).
+  async function deepSync() {
+    setLoading("deep");
+    setMsg(null);
+    try {
+      const res = await fetch("/api/integrations/garmin/deep-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ days: 90 }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMsg(
+          data.needsSupervisedLogin
+            ? tr("integ.deepSupervised")
+            : data.error ?? tr("c.error"),
+        );
+      } else {
+        setMsg(
+          `${tr("integ.deepDone")} ${data.activities ?? 0} · 😴 ${data.sleepRecords ?? 0} · 📈 ${data.dailyMetrics ?? 0}`,
+        );
+        router.refresh();
+      }
+    } catch {
+      setMsg(tr("c.retry"));
+    } finally {
+      setLoading(null);
+    }
+  }
+
   if (!connected) {
     return (
       <a href={`/api/integrations/${provider}/connect`} className="btn-brand">
@@ -55,6 +88,16 @@ export default function IntegrationActions({
           disabled={loading !== null}
         >
           {loading === "sync" ? tr("integ.syncing") : tr("integ.syncNow")}
+        </button>
+      )}
+      {canDeepSync && (
+        <button
+          onClick={deepSync}
+          className="btn-ghost"
+          disabled={loading !== null}
+          title={tr("integ.deepSyncDesc")}
+        >
+          {loading === "deep" ? tr("integ.deepSyncing") : tr("integ.deepSync")}
         </button>
       )}
       <button

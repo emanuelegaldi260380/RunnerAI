@@ -3,6 +3,7 @@ import path from "path";
 import OpenAI from "openai";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { storageConfigured, putObject } from "@/lib/storage";
 
 const IMG_DIR = path.join(process.cwd(), "public", "science-images");
 
@@ -50,10 +51,15 @@ export async function getOrCreateScienceImage(
     }
     if (!buffer) return null;
 
-    await fs.mkdir(IMG_DIR, { recursive: true });
     const fileName = `${key}-${src.id.slice(-6)}.png`;
-    await fs.writeFile(path.join(IMG_DIR, fileName), buffer);
-    const imageUrl = `/science-images/${fileName}`;
+    let imageUrl: string;
+    if (storageConfigured()) {
+      imageUrl = await putObject(`science-images/${fileName}`, buffer, "image/png");
+    } else {
+      await fs.mkdir(IMG_DIR, { recursive: true });
+      await fs.writeFile(path.join(IMG_DIR, fileName), buffer);
+      imageUrl = `/science-images/${fileName}`;
+    }
 
     await db.scientificSource.update({ where: { id }, data: { imageUrl } });
     return imageUrl;

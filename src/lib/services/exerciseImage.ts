@@ -3,6 +3,7 @@ import path from "path";
 import OpenAI from "openai";
 import { db } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { storageConfigured, putObject } from "@/lib/storage";
 
 const IMG_DIR = path.join(process.cwd(), "public", "exercise-images");
 
@@ -55,6 +56,11 @@ async function generateAndSave(prompt: string, fileName: string): Promise<string
     if (dl.ok) buffer = Buffer.from(await dl.arrayBuffer());
   }
   if (!buffer) return null;
+  // In produzione (serverless) `public/` è read-only ed effimero: usa lo storage
+  // oggetti S3-compatibile se configurato. In sviluppo scrive su public/.
+  if (storageConfigured()) {
+    return putObject(`exercise-images/${fileName}`, buffer, "image/png");
+  }
   await fs.mkdir(IMG_DIR, { recursive: true });
   await fs.writeFile(path.join(IMG_DIR, fileName), buffer);
   return `/exercise-images/${fileName}`;

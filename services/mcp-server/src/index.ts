@@ -12,10 +12,28 @@ import {
 
 const BASE = process.env.RUNNERAI_URL || "http://localhost:3000";
 const TOKEN = process.env.SERVICE_TOKEN || "";
+// Token PERSONALE dell'utente (generato in RunnerAI → Integrazioni). Lega il
+// server MCP a un solo account: gli strumenti "my_*" leggono i suoi dati.
+const USER_TOKEN = process.env.RUNNERAI_TOKEN || "";
 
+/** Chiamata alle API di servizio globali (rassegna stampa, scienza). */
 async function api(path: string): Promise<unknown> {
   const res = await fetch(`${BASE}${path}`, {
     headers: { Authorization: `Bearer ${TOKEN}` },
+  });
+  if (!res.ok) throw new Error(`RunnerAI API ${res.status} su ${path}`);
+  return res.json();
+}
+
+/** Chiamata alle API personali (/api/mcp/*) col token dell'utente. */
+async function apiPersonal(path: string): Promise<unknown> {
+  if (!USER_TOKEN) {
+    throw new Error(
+      "RUNNERAI_TOKEN non configurato: crea un token in RunnerAI → Integrazioni.",
+    );
+  }
+  const res = await fetch(`${BASE}${path}`, {
+    headers: { Authorization: `Bearer ${USER_TOKEN}` },
   });
   if (!res.ok) throw new Error(`RunnerAI API ${res.status} su ${path}`);
   return res.json();
@@ -46,6 +64,29 @@ const TOOLS = [
       required: ["query"],
     },
   },
+  {
+    name: "my_profile",
+    description:
+      "Contesto dell'atleta collegato: profilo, gemello fisiologico (soglia, zone, decoupling, durabilità, sensibilità al caldo) e mappatura sensazioni↔performance. Richiede RUNNERAI_TOKEN.",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "my_recent_activities",
+    description:
+      "Ultimi allenamenti svolti dall'atleta collegato (data, tipo, distanza, passo, FC). Richiede RUNNERAI_TOKEN.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        limit: { type: "number", description: "numero di attività (default 15, max 50)" },
+      },
+    },
+  },
+  {
+    name: "my_training_plan",
+    description:
+      "Piano di allenamento attivo dell'atleta collegato con le prossime sedute pianificate. Richiede RUNNERAI_TOKEN.",
+    inputSchema: { type: "object", properties: {} },
+  },
 ] as const;
 
 const server = new Server(
@@ -73,6 +114,21 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
         sources: unknown;
       };
       return { content: [{ type: "text", text: JSON.stringify(data.sources, null, 2) }] };
+    }
+    if (name === "my_profile") {
+      const data = await apiPersonal(`/api/mcp/context`);
+      return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+    }
+    if (name === "my_recent_activities") {
+      const limit = Number((args as { limit?: number })?.limit ?? 15);
+      const data = (await apiPersonal(`/api/mcp/activities?limit=${limit}`)) as {
+        activities: unknown;
+      };
+      return { content: [{ type: "text", text: JSON.stringify(data.activities, null, 2) }] };
+    }
+    if (name === "my_training_plan") {
+      const data = (await apiPersonal(`/api/mcp/plan`)) as { plan: unknown };
+      return { content: [{ type: "text", text: JSON.stringify(data.plan, null, 2) }] };
     }
     return {
       content: [{ type: "text", text: `Tool sconosciuto: ${name}` }],

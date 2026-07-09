@@ -12,6 +12,9 @@ import { fmtDate, fmtDistance, fmtDuration, fmtPace, typeLabel } from "@/lib/for
 import { formatKnowledgeContext, retrieveRelevant } from "./knowledge";
 import { effectiveLlmCount } from "@/lib/plans";
 import { pregenerateExerciseImages } from "./exerciseImage";
+import { physiologyContextBlock } from "./physiology";
+import { computeSubjectiveMapping, subjectiveContextBlock } from "./subjectiveMapping";
+import { critiquePlan, pickCriticProvider } from "./planCritic";
 
 const PLAN_HORIZON_DAYS = 14;
 
@@ -41,7 +44,7 @@ interface PlanDraft {
 async function buildContext(userId: string) {
   const today0 = new Date();
   today0.setHours(0, 0, 0, 0);
-  const [profile, activities, races, offDays] = await Promise.all([
+  const [profile, activities, races, offDays, physiology] = await Promise.all([
     db.athleteProfile.findUnique({ where: { userId } }),
     db.activity.findMany({
       where: { userId },
@@ -56,7 +59,17 @@ async function buildContext(userId: string) {
       where: { userId, date: { gte: today0 } },
       orderBy: { date: "asc" },
     }),
+    db.physiologyProfile.findUnique({ where: { userId } }),
   ]);
+
+  // Gemello fisiologico (Modulo 2): valori reali su cui calibrare ritmi e zone.
+  const physioBlock = physiology ? physiologyContextBlock(physiology) : "";
+
+  // Mappatura soggettivo↔oggettivo (Modulo 4): relazioni personali dai log.
+  const subjectiveMapping = await computeSubjectiveMapping(userId).catch(() => null);
+  const subjectiveBlock = subjectiveMapping
+    ? subjectiveContextBlock(subjectiveMapping)
+    : "";
 
   const offBlock = offDays.length
     ? "GIORNI OFF (l'atleta NON è disponibile: assegna SEMPRE type \"rest\" in queste date):\n" +
@@ -129,6 +142,8 @@ async function buildContext(userId: string) {
             goals.targetTimeSec ? fmtDuration(Number(goals.targetTimeSec)) : "n/d"
           }, Data: ${goals.raceDate ?? "n/d"}`
         : "OBIETTIVO:\n- Nessun obiettivo specifico impostato (proponi un obiettivo ragionevole di miglioramento generale)"),
+    physioBlock ? "\n" + physioBlock : "",
+    subjectiveBlock ? "\n" + subjectiveBlock : "",
     hrZonesBlock ? "\n" + hrZonesBlock : "",
     crossBlock ? "\n" + crossBlock : "",
     offBlock ? "\n" + offBlock : "",
@@ -321,6 +336,7 @@ export async function generatePlan(
           },
         ],
         "multi-llm",
+        { brief, knowledge, lang, planProvider: userLlm.provider as ProviderName },
       );
     } catch {
       // chiave utente non valida -> fallback alle chiavi RunnerAI
@@ -353,6 +369,7 @@ export async function generatePlan(
       plan,
       [{ role: "PROPOSER_A", provider: roles.proposerA, model: provA.model, content: plan }],
       "multi-llm",
+      { brief, knowledge, lang, planProvider: roles.proposerA },
     );
   }
 
@@ -378,6 +395,7 @@ export async function generatePlan(
         { role: "SUPERVISOR", provider: supName, model: provSup.model, content: finalPlan },
       ],
       "multi-llm",
+      { brief, knowledge, lang, planProvider: supName },
     );
   }
 
@@ -398,7 +416,12 @@ export async function generatePlan(
     { role: "PROPOSER_B", provider: roles.proposerB, model: provB.model, content: propB },
     { role: "SUPERVISOR", provider: roles.supervisor, model: provSup.model, content: finalPlan },
   ];
-  return persistPlan(userId, finalPlan, proposals, "multi-llm");
+  return persistPlan(userId, finalPlan, proposals, "multi-llm", {
+    brief,
+    knowledge,
+    lang,
+    planProvider: roles.supervisor,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -444,6 +467,13 @@ async function enrichExercises(plan: PlanDraft): Promise<void> {
   }
 }
 
+interface CriticCtx {
+  brief: string;
+  knowledge: string;
+  lang: string;
+  planProvider?: ProviderName;
+}
+
 async function persistPlan(
   userId: string,
   plan: PlanDraft,
@@ -454,10 +484,37 @@ async function persistPlan(
     content: unknown;
   }[],
   engine: "multi-llm" | "mock",
+  criticCtx?: CriticCtx,
 ): Promise<GenerateResult> {
   // estrai esercizi dalle descrizioni delle sedute cross se mancano nel campo strutturato
   if (engine === "multi-llm") {
     await enrichExercises(plan);
+
+    // Modulo 6 — Secondo Parere avversariale: un coach AI indipendente esamina
+    // criticamente il piano finale. Persistito come proposta role="CRITIC".
+    if (criticCtx) {
+      const critic = pickCriticProvider(criticCtx.planProvider);
+      if (critic) {
+        const critique = await critiquePlan(
+          critic,
+          criticCtx.brief,
+          criticCtx.knowledge,
+          plan,
+          criticCtx.lang,
+        );
+        if (critique) {
+          proposals = [
+            ...proposals,
+            {
+              role: "CRITIC",
+              provider: critic.name,
+              model: critic.model,
+              content: critique as unknown,
+            },
+          ];
+        }
+      }
+    }
   }
 
   const workouts = (plan.workouts ?? []).filter((w) => w && w.type);

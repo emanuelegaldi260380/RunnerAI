@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { encryptionConfigured } from "@/lib/crypto";
 import { stravaConfigured } from "@/lib/integrations/strava";
 import { garminReady } from "@/lib/integrations/garmin";
+import { garminBridgeConfigured } from "@/lib/integrations/garminBridge";
 import IntegrationActions from "@/components/IntegrationActions";
 import GarminConnectForm from "@/components/GarminConnectForm";
 import { fmtDate } from "@/lib/format";
@@ -101,7 +102,12 @@ export default async function IntegrationsPanel() {
           {!garminReady() ? (
             <span className="text-sm text-muted">{tr("integ.configEncKey")}</span>
           ) : byProvider.garmin ? (
-            <IntegrationActions provider="garmin" connected canSync />
+            <IntegrationActions
+              provider="garmin"
+              connected
+              canSync
+              canDeepSync={garminBridgeConfigured()}
+            />
           ) : (
             <GarminConnectForm />
           )}

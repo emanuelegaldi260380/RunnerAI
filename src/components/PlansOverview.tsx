@@ -13,7 +13,7 @@ export default async function PlansOverview({ compact = false }: { compact?: boo
   return (
     <div className={`grid gap-3 ${compact ? "" : "sm:grid-cols-3"}`}>
       {order.map((id) => {
-        const t = TIERS[id];
+        const tier = TIERS[id];
         return (
           <div
             key={id}
@@ -22,15 +22,15 @@ export default async function PlansOverview({ compact = false }: { compact?: boo
             }`}
           >
             <div className="flex items-center justify-between">
-              <h4 className="font-bold">{t.name}</h4>
+              <h4 className="font-bold">{tr(tier.nameKey)}</h4>
               {id === "pro" && <span className="chip !text-xs">{tr("po.top")}</span>}
             </div>
-            <div className="mt-1 text-lg font-extrabold">{t.priceLabel}</div>
+            <div className="mt-1 text-lg font-extrabold">{tr(tier.priceKey)}</div>
             <ul className="mt-2 space-y-1 text-xs text-muted">
-              <li>✓ {t.monthlyPlans} {tr("po.plansPerMonth")}</li>
-              <li>✓ {t.monthlyIngests} {tr("po.ingestsPerMonth")}</li>
-              {t.features.slice(2).map((f) => (
-                <li key={f}>✓ {f}</li>
+              <li>✓ {tier.monthlyPlans} {tr("po.plansPerMonth")}</li>
+              <li>✓ {tier.monthlyIngests} {tr("po.ingestsPerMonth")}</li>
+              {tier.featureKeys.slice(2).map((k) => (
+                <li key={k}>✓ {tr(k)}</li>
               ))}
             </ul>
           </div>

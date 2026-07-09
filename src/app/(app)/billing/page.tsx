@@ -60,7 +60,7 @@ export default async function BillingPage() {
           <div>
             <div className="text-sm text-muted">{tr("bill.currentPlan")}</div>
             <div className="text-lg font-semibold">
-              {def ? def.name : statusLabels[access.status] ?? access.status}
+              {def ? tr(def.nameKey) : statusLabels[access.status] ?? access.status}
             </div>
           </div>
           <div className="text-right">
@@ -96,13 +96,13 @@ export default async function BillingPage() {
           return (
             <div key={id} className={`card ${id === "pro" ? "border-brand" : ""}`}>
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold">{t.name}</h3>
+                <h3 className="text-lg font-bold">{tr(t.nameKey)}</h3>
                 {id === "pro" && <span className="chip !text-xs">{tr("bill.recommended")}</span>}
               </div>
-              <div className="mt-1 text-2xl font-extrabold">{t.priceLabel}</div>
+              <div className="mt-1 text-2xl font-extrabold">{tr(t.priceKey)}</div>
               <ul className="mt-3 space-y-1 text-sm text-muted">
-                {t.features.map((f) => (
-                  <li key={f}>✓ {f}</li>
+                {t.featureKeys.map((k) => (
+                  <li key={k}>✓ {tr(k)}</li>
                 ))}
               </ul>
               <div className="mt-4">
@@ -117,8 +117,8 @@ export default async function BillingPage() {
                 ) : (
                   <SubscribeButton
                     tier={id}
-                    planName={t.name}
-                    priceLabel={t.priceLabel}
+                    planName={tr(t.nameKey)}
+                    priceLabel={tr(t.priceKey)}
                     variant={id === "pro" ? "brand" : "ghost"}
                   />
                 )}

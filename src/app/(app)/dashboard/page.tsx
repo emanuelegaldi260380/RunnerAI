@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import RunAgentButton from "@/components/RunAgentButton";
 import GeneratePlanButton from "@/components/GeneratePlanButton";
 import SubjectiveLogForm from "@/components/SubjectiveLogForm";
+import SubjectiveInsightsCard from "@/components/SubjectiveInsightsCard";
+import PhysiologyCard, { type PhysioDTO } from "@/components/PhysiologyCard";
 import RaceGoals, { type Race } from "@/components/RaceGoals";
 import { isAdminEmail } from "@/lib/admin";
 import { computePersonalBests } from "@/lib/services/personalBests";
@@ -38,6 +40,25 @@ export default async function DashboardPage() {
       }),
       db.athleteProfile.findUnique({ where: { userId } }),
     ]);
+
+  const physiology = await db.physiologyProfile.findUnique({ where: { userId } });
+  const physioDTO: PhysioDTO | null = physiology
+    ? {
+        lthrBpm: physiology.lthrBpm,
+        thresholdPaceSecPerKm: physiology.thresholdPaceSecPerKm,
+        maxHrEst: physiology.maxHrEst,
+        restingHrEst: physiology.restingHrEst,
+        vo2max: physiology.vo2max,
+        hrZones: physiology.hrZones as PhysioDTO["hrZones"],
+        decouplingPct: physiology.decouplingPct,
+        durabilityPct: physiology.durabilityPct,
+        heatSecPerKmPerC: physiology.heatSecPerKmPerC,
+        baselineHrvMs: physiology.baselineHrvMs,
+        sampleActivities: physiology.sampleActivities,
+        confidence: physiology.confidence,
+        notes: physiology.notes,
+      }
+    : null;
 
   const steps = [
     { done: !!profile?.experience, label: tt("d.s1"), href: "/profile" },
@@ -212,9 +233,15 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Log soggettivo (Modulo 4) */}
+      {/* Gemello fisiologico (Modulo 2) */}
       <div className="mt-6">
+        <PhysiologyCard initial={physioDTO} />
+      </div>
+
+      {/* Log soggettivo + mappatura (Modulo 4) */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <SubjectiveLogForm />
+        <SubjectiveInsightsCard />
       </div>
 
       {/* Base scientifica */}
