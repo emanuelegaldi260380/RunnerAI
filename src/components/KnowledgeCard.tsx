@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLang } from "@/components/LangProvider";
+import Icon from "@/components/Icon";
 
 interface Source {
   id: string;
@@ -130,11 +131,11 @@ export default function KnowledgeCard({
           />
         ) : gen ? (
           <div className="flex h-full w-full animate-pulse items-center justify-center bg-gradient-to-br from-surface to-brand/5">
-            <span className="text-3xl opacity-30">🔬</span>
+            <Icon name="flask" size={30} className="text-brand opacity-30" />
           </div>
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-brand/15 to-accent/15">
-            <span className="text-4xl opacity-60">🔬</span>
+            <Icon name="flask" size={40} className="text-brand opacity-60" />
           </div>
         )}
         <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-0.5 text-xs font-semibold text-brand shadow-sm backdrop-blur">

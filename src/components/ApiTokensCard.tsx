@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useT } from "@/components/LangProvider";
+import Icon from "@/components/Icon";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 interface TokenRow {
   id: string;
@@ -19,6 +21,7 @@ export default function ApiTokensCard() {
   const [created, setCreated] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmRevoke, setConfirmRevoke] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -30,8 +33,22 @@ export default function ApiTokensCard() {
     }
   }
 
+  // Caricamento iniziale: fetch inline nell'effect, setState solo dopo l'await
+  // (evita react-hooks/set-state-in-effect).
   useEffect(() => {
-    load();
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/settings/tokens");
+        const d = await res.json();
+        if (alive && res.ok) setTokens(d.tokens ?? []);
+      } catch {
+        /* silenzioso */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
   }, []);
 
   async function create() {
@@ -46,14 +63,14 @@ export default function ApiTokensCard() {
         body: JSON.stringify({ name }),
       });
       const d = await res.json();
-      if (!res.ok) setError(d.error ?? "Errore");
+      if (!res.ok) setError(d.error ?? tr("c.error"));
       else {
         setCreated(d.token);
         setName("");
         load();
       }
     } catch {
-      setError("Errore di rete");
+      setError(tr("c.retry"));
     } finally {
       setBusy(false);
     }
@@ -76,7 +93,10 @@ export default function ApiTokensCard() {
 
   return (
     <div className="card">
-      <h3 className="mb-1 font-semibold">{tr("tokens.title")}</h3>
+      <h2 className="mb-1 flex items-center gap-2 font-semibold">
+        <Icon name="key" size={18} className="text-brand" />
+        {tr("tokens.title")}
+      </h2>
       <p className="mb-4 text-sm text-muted">{tr("tokens.desc")}</p>
 
       <div className="flex flex-wrap items-end gap-2">
@@ -95,10 +115,18 @@ export default function ApiTokensCard() {
         </button>
       </div>
 
-      {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
+      {error && (
+        <p className="mt-2 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
 
       {created && (
-        <div className="mt-4 rounded-lg border border-brand/40 bg-brand/5 p-3">
+        <div
+          className="mt-4 rounded-lg border border-brand/40 bg-brand/5 p-3"
+          role="status"
+          aria-live="polite"
+        >
           <p className="mb-2 text-sm font-medium text-brand">{tr("tokens.copyOnce")}</p>
           <div className="flex items-center gap-2">
             <code className="flex-1 overflow-x-auto rounded bg-black/5 px-2 py-1.5 text-xs dark:bg-white/10">
@@ -129,8 +157,8 @@ export default function ApiTokensCard() {
                   </div>
                 </div>
                 <button
-                  onClick={() => revoke(t.id)}
-                  className="shrink-0 text-sm text-red-500 hover:underline"
+                  onClick={() => setConfirmRevoke(t.id)}
+                  className="focus-ring shrink-0 rounded px-1 text-sm font-medium text-red-600 hover:underline"
                 >
                   {tr("tokens.revoke")}
                 </button>
@@ -139,6 +167,21 @@ export default function ApiTokensCard() {
           </ul>
         )}
       </div>
+
+      {confirmRevoke && (
+        <ConfirmDialog
+          title={tr("tokens.revokeTitle")}
+          body={tr("tokens.revokeBody")}
+          confirmLabel={tr("tokens.revoke")}
+          cancelLabel={tr("confirm.cancel")}
+          danger
+          onConfirm={async () => {
+            await revoke(confirmRevoke);
+            setConfirmRevoke(null);
+          }}
+          onClose={() => setConfirmRevoke(null)}
+        />
+      )}
     </div>
   );
 }

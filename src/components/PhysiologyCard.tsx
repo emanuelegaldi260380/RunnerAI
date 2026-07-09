@@ -25,12 +25,14 @@ export interface PhysioDTO {
   notes: string | null;
 }
 
+// Swatch a piena opacità: il colore è solo indicatore visivo (nessun testo
+// sopra), così il contrasto del testo non dipende più dalla tinta della zona.
 const ZONE_COLORS: Record<string, string> = {
-  z1: "bg-sky-500/70",
-  z2: "bg-green-500/70",
-  z3: "bg-yellow-500/70",
-  z4: "bg-orange-500/70",
-  z5: "bg-red-500/70",
+  z1: "bg-sky-500",
+  z2: "bg-green-500",
+  z3: "bg-yellow-500",
+  z4: "bg-orange-500",
+  z5: "bg-red-500",
 };
 
 export default function PhysiologyCard({ initial }: { initial: PhysioDTO | null }) {
@@ -70,7 +72,7 @@ export default function PhysiologyCard({ initial }: { initial: PhysioDTO | null 
         <h2 className="font-semibold">{tr("phys.title")}</h2>
         <button
           onClick={recompute}
-          className="btn-ghost !py-1 !text-xs"
+          className="btn-ghost !py-1.5 text-xs"
           disabled={loading}
         >
           {loading ? tr("phys.recomputing") : tr("phys.recompute")}
@@ -85,18 +87,20 @@ export default function PhysiologyCard({ initial }: { initial: PhysioDTO | null 
           {/* Zone FC */}
           {p!.hrZones && (
             <div className="mb-4">
-              <div className="mb-1 text-xs font-medium text-muted">{tr("phys.zones")}</div>
-              <div className="flex overflow-hidden rounded-lg">
+              <div className="mb-1.5 text-xs font-medium text-muted">
+                {tr("phys.zones")} <span className="font-normal">(bpm)</span>
+              </div>
+              <div className="grid grid-cols-5 gap-1.5">
                 {(["z1", "z2", "z3", "z4", "z5"] as const).map((z) => {
                   const zone = p!.hrZones![z];
                   return (
-                    <div
-                      key={z}
-                      className={`flex-1 px-1 py-1.5 text-center text-[10px] font-semibold text-white ${ZONE_COLORS[z]}`}
-                      title={`${z.toUpperCase()}: ${zone.min}–${zone.max} bpm`}
-                    >
-                      {z.toUpperCase()}
-                      <div className="text-[9px] font-normal opacity-90">
+                    <div key={z} className="text-center">
+                      <div
+                        className={`h-2 rounded-full ${ZONE_COLORS[z]}`}
+                        aria-hidden="true"
+                      />
+                      <div className="mt-1 text-xs font-semibold">{z.toUpperCase()}</div>
+                      <div className="text-[11px] text-muted">
                         {zone.min}–{zone.max}
                       </div>
                     </div>
@@ -162,7 +166,7 @@ export default function PhysiologyCard({ initial }: { initial: PhysioDTO | null 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-border p-2.5">
-      <div className="text-[11px] text-muted">{label}</div>
+      <div className="text-xs text-muted">{label}</div>
       <div className="text-base font-bold">{value}</div>
     </div>
   );

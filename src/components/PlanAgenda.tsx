@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useT } from "@/components/LangProvider";
 import Modal from "@/components/Modal";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import Icon from "@/components/Icon";
 
 export interface Exercise {
   name: string;
@@ -351,14 +352,22 @@ export default function PlanAgenda({
               selected.targetPaceMinSec != null ||
               selected.targetHrZone) && (
               <div className="mt-3 flex flex-wrap gap-3 text-sm text-muted">
-                {selected.targetDistanceKm != null && <span>🎯 {selected.targetDistanceKm} km</span>}
+                {selected.targetDistanceKm != null && (
+                  <span className="inline-flex items-center gap-1">
+                    <Icon name="target" size={15} /> {selected.targetDistanceKm} km
+                  </span>
+                )}
                 {selected.targetPaceMinSec != null && (
-                  <span>
-                    ⏱️ {pace(selected.targetPaceMinSec)}
+                  <span className="inline-flex items-center gap-1">
+                    <Icon name="timer" size={15} /> {pace(selected.targetPaceMinSec)}
                     {selected.targetPaceMaxSec ? `–${pace(selected.targetPaceMaxSec)}` : ""}
                   </span>
                 )}
-                {selected.targetHrZone && <span>❤️ {selected.targetHrZone}</span>}
+                {selected.targetHrZone && (
+                  <span className="inline-flex items-center gap-1">
+                    <Icon name="heart" size={15} /> {selected.targetHrZone}
+                  </span>
+                )}
               </div>
             )}
 

@@ -25,19 +25,19 @@ export default async function AppLayout({
 
   // Destinazioni principali → bottom bar mobile + testa della sidebar.
   const primaryNav = [
-    { href: "/dashboard", label: tt("nav.dashboard"), icon: "🏠" },
-    { href: "/activities", label: tt("an.activities"), icon: "🏃" },
-    { href: "/plan", label: tt("an.plan"), icon: "🗓️" },
-    { href: "/profile", label: tt("an.profile"), icon: "👤" },
+    { href: "/dashboard", label: tt("nav.dashboard"), icon: "home" },
+    { href: "/activities", label: tt("an.activities"), icon: "activity" },
+    { href: "/plan", label: tt("an.plan"), icon: "calendar" },
+    { href: "/profile", label: tt("an.profile"), icon: "user" },
   ];
   // Destinazioni secondarie → resto della sidebar + drawer "Altro" su mobile.
   const secondaryNav = [
-    { href: "/integrations", label: tt("an.integrations"), icon: "🔗" },
-    { href: "/knowledge", label: tt("an.knowledge"), icon: "📚" },
-    { href: "/billing", label: tt("an.billing"), icon: "💳" },
+    { href: "/integrations", label: tt("an.integrations"), icon: "link" },
+    { href: "/knowledge", label: tt("an.knowledge"), icon: "book" },
+    { href: "/billing", label: tt("an.billing"), icon: "credit-card" },
   ];
   if (isAdminEmail(session.user.email)) {
-    secondaryNav.push({ href: "/admin", label: tt("an.admin"), icon: "🛠️" });
+    secondaryNav.push({ href: "/admin", label: tt("an.admin"), icon: "wrench" });
   }
 
   return (

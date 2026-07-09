@@ -7,6 +7,7 @@ import SubjectiveLogForm from "@/components/SubjectiveLogForm";
 import SubjectiveInsightsCard from "@/components/SubjectiveInsightsCard";
 import PhysiologyCard, { type PhysioDTO } from "@/components/PhysiologyCard";
 import RaceGoals, { type Race } from "@/components/RaceGoals";
+import Icon from "@/components/Icon";
 import { isAdminEmail } from "@/lib/admin";
 import { computePersonalBests } from "@/lib/services/personalBests";
 import { fmtDate, fmtDistance, fmtDuration, fmtPace, typeLabel } from "@/lib/format";
@@ -198,12 +199,20 @@ export default async function DashboardPage() {
                   <p className="mt-1 text-sm text-muted">{todayWorkout.description}</p>
                   <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted">
                     {todayWorkout.targetDistanceKm != null && (
-                      <span>🎯 {fmtDistance(todayWorkout.targetDistanceKm)}</span>
+                      <span className="inline-flex items-center gap-1">
+                        <Icon name="target" size={14} /> {fmtDistance(todayWorkout.targetDistanceKm)}
+                      </span>
                     )}
                     {todayWorkout.targetPaceMinSec != null && (
-                      <span>⏱️ {fmtPace(todayWorkout.targetPaceMinSec)}</span>
+                      <span className="inline-flex items-center gap-1">
+                        <Icon name="timer" size={14} /> {fmtPace(todayWorkout.targetPaceMinSec)}
+                      </span>
                     )}
-                    {todayWorkout.targetHrZone && <span>❤️ {todayWorkout.targetHrZone}</span>}
+                    {todayWorkout.targetHrZone && (
+                      <span className="inline-flex items-center gap-1">
+                        <Icon name="heart" size={14} /> {todayWorkout.targetHrZone}
+                      </span>
+                    )}
                   </div>
                 </div>
               ) : nextWorkout ? (
@@ -241,7 +250,11 @@ export default async function DashboardPage() {
               <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted">
                 <span>{fmtDistance(lastActivity.distanceKm)}</span>
                 <span>{fmtPace(lastActivity.avgPaceSecPerKm)}</span>
-                {lastActivity.avgHr && <span>❤️ {lastActivity.avgHr} bpm</span>}
+                {lastActivity.avgHr && (
+                  <span className="inline-flex items-center gap-1">
+                    <Icon name="heart" size={14} /> {lastActivity.avgHr} bpm
+                  </span>
+                )}
               </div>
             </div>
           ) : (

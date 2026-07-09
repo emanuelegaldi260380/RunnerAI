@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import NavLink from "@/components/NavLink";
 import SignOutButton from "@/components/SignOutButton";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import Icon from "@/components/Icon";
 import { useT } from "@/components/LangProvider";
 
 interface Item {
@@ -34,10 +35,14 @@ export default function MobileNav({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  // chiudi il drawer quando cambia rotta
-  useEffect(() => {
+  // chiudi il drawer quando cambia rotta: aggiornamento di stato durante il
+  // render (pattern React consigliato) invece di un effect, così non innesca
+  // render a cascata (react-hooks/set-state-in-effect).
+  const [lastPath, setLastPath] = useState(pathname);
+  if (pathname !== lastPath) {
+    setLastPath(pathname);
     setOpen(false);
-  }, [pathname]);
+  }
 
   // chiusura con Esc + blocco scroll quando il drawer è aperto
   useEffect(() => {
@@ -75,9 +80,7 @@ export default function MobileNav({
             moreActive ? "text-brand" : "text-muted hover:text-foreground"
           }`}
         >
-          <span aria-hidden="true" className="text-lg leading-none">
-            ⋯
-          </span>
+          <Icon name="more" size={22} />
           <span className="leading-none">{tr("nav.more")}</span>
         </button>
       </nav>
@@ -103,7 +106,7 @@ export default function MobileNav({
                 aria-label={tr("nav.close")}
                 className="focus-ring flex h-9 w-9 items-center justify-center rounded-full text-muted transition hover:bg-black/5 hover:text-foreground"
               >
-                <span aria-hidden="true">✕</span>
+                <Icon name="x" size={18} />
               </button>
             </div>
             <div className="flex flex-col gap-1">

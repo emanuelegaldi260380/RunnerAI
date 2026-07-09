@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useT } from "@/components/LangProvider";
+import Icon from "@/components/Icon";
 
 interface Source {
   title: string;
@@ -66,10 +67,11 @@ export default function KnowledgeDrawer() {
     <>
       <button
         onClick={openDrawer}
-        className="btn-ghost px-3 py-2 text-sm"
+        className="btn-ghost inline-flex items-center gap-1.5 px-3 py-2 text-sm"
         title={tr("kd.buttonTitle")}
       >
-        📚 <span className="hidden sm:inline">{tr("kd.buttonLabel")}</span>
+        <Icon name="book" size={16} />
+        <span className="hidden sm:inline">{tr("kd.buttonLabel")}</span>
       </button>
 
       {open && (
@@ -89,9 +91,9 @@ export default function KnowledgeDrawer() {
               <button
                 onClick={() => setOpen(false)}
                 aria-label={tr("kd.close")}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-black/5"
+                className="focus-ring flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-black/5"
               >
-                ✕
+                <Icon name="x" size={18} />
               </button>
             </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Icon from "@/components/Icon";
 
 export interface NewsItem {
   id: string;
@@ -45,7 +46,7 @@ function Thumb({
       <div
         className={`flex items-center justify-center bg-gradient-to-br from-brand/15 to-accent/15 ${className ?? ""}`}
       >
-        <span className="text-4xl opacity-60">🏃</span>
+        <Icon name="activity" size={40} className="text-brand opacity-60" />
       </div>
     );
   }
@@ -210,9 +211,9 @@ export default function NewsFeed({
             <button
               onClick={() => setSel(null)}
               aria-label={labels.close}
-              className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-lg shadow-md backdrop-blur transition hover:bg-white"
+              className="focus-ring absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-700 shadow-md backdrop-blur transition hover:bg-white"
             >
-              ✕
+              <Icon name="x" size={18} />
             </button>
 
             <Thumb src={sel.imageUrl} className="aspect-[16/9] w-full" />

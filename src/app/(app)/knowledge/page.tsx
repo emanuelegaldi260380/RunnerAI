@@ -6,6 +6,7 @@ import { isAdminEmail } from "@/lib/admin";
 import { t as i18nT } from "@/lib/i18n";
 import { getServerLang } from "@/lib/i18n-server";
 import { titleMeta } from "@/lib/pageMeta";
+import Icon from "@/components/Icon";
 
 export const generateMetadata = () => titleMeta("an.knowledge");
 
@@ -37,7 +38,10 @@ export default async function KnowledgePage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <h1 className="mb-1 text-2xl font-bold">📚 {tr("an.knowledge")}</h1>
+      <h1 className="mb-1 flex items-center gap-2 text-2xl font-bold">
+        <Icon name="book" size={26} className="text-brand" />
+        {tr("an.knowledge")}
+      </h1>
       <p className="mb-6 text-muted">
         {tr("kn.descA")}
         {total}

@@ -6,6 +6,7 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import SignOutButton from "@/components/SignOutButton";
 import PlansOverview from "@/components/PlansOverview";
 import SiteFooter from "@/components/SiteFooter";
+import Icon from "@/components/Icon";
 import { localeOf, t } from "@/lib/i18n";
 import { getServerLang } from "@/lib/i18n-server";
 
@@ -67,10 +68,10 @@ export default async function Home() {
   };
 
   const features = [
-    { icon: "📥", t: tt("f1.t"), d: tt("f1.d") },
-    { icon: "🧠", t: tt("f2.t"), d: tt("f2.d") },
-    { icon: "🔬", t: tt("f3.t"), d: tt("f3.d") },
-    { icon: "📈", t: tt("f4.t"), d: tt("f4.d") },
+    { icon: "download", t: tt("f1.t"), d: tt("f1.d") },
+    { icon: "sparkles", t: tt("f2.t"), d: tt("f2.d") },
+    { icon: "flask", t: tt("f3.t"), d: tt("f3.d") },
+    { icon: "trending-up", t: tt("f4.t"), d: tt("f4.d") },
   ];
 
   const stats: [string, string][] = [
@@ -213,8 +214,8 @@ export default async function Home() {
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {features.map((f) => (
               <div key={f.t} className="card">
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-brand/10 text-2xl">
-                  {f.icon}
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-brand/10 text-brand">
+                  <Icon name={f.icon} size={26} />
                 </div>
                 <h3 className="mb-1 font-bold">{f.t}</h3>
                 <p className="text-sm text-muted">{f.d}</p>
@@ -231,13 +232,15 @@ export default async function Home() {
         </h2>
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            ["m1.t", "m1.d", "📥"],
-            ["m2.t", "m2.d", "🤖"],
-            ["m3.t", "m3.d", "🧠"],
-            ["m4.t", "m4.d", "🔄"],
+            ["m1.t", "m1.d", "download"],
+            ["m2.t", "m2.d", "bot"],
+            ["m3.t", "m3.d", "sparkles"],
+            ["m4.t", "m4.d", "refresh"],
           ].map(([tk, dk, icon]) => (
             <div key={tk} className="rounded-2xl border border-border bg-card p-5">
-              <div className="mb-3 text-3xl">{icon}</div>
+              <div className="mb-3 text-brand">
+                <Icon name={icon} size={30} />
+              </div>
               <h3 className="font-bold">{tt(tk)}</h3>
               <p className="mt-1 text-sm text-muted">{tt(dk)}</p>
             </div>

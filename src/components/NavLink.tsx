@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Icon from "@/components/Icon";
 
 export default function NavLink({
   href,
@@ -30,9 +31,7 @@ export default function NavLink({
           active ? "text-brand" : "text-muted hover:text-foreground"
         }`}
       >
-        <span aria-hidden="true" className="text-lg leading-none">
-          {icon}
-        </span>
+        <Icon name={icon} size={22} />
         <span className="leading-none">{label}</span>
       </Link>
     );
@@ -49,9 +48,7 @@ export default function NavLink({
           : "text-muted hover:bg-black/5 hover:text-foreground"
       }`}
     >
-      <span aria-hidden="true" className="text-base">
-        {icon}
-      </span>
+      <Icon name={icon} size={18} />
       {label}
     </Link>
   );

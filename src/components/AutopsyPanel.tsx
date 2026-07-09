@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "@/components/LangProvider";
+import Icon from "@/components/Icon";
 
 export interface AutopsyDTO {
   headline: string | null;
@@ -61,13 +62,17 @@ export default function AutopsyPanel({ candidates }: { candidates: AutopsyCandid
   return (
     <div className="card">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-semibold">{tr("autopsy.title")}</h2>
+        <h2 className="flex items-center gap-2 font-semibold">
+          <Icon name="flask" size={18} className="text-brand" />
+          {tr("autopsy.title")}
+        </h2>
       </div>
       <p className="mb-3 text-sm text-muted">{tr("autopsy.desc")}</p>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <select
           className="input max-w-xs"
+          aria-label={tr("autopsy.selectActivity")}
           value={selected}
           onChange={(e) => setSelected(e.target.value)}
         >
@@ -87,10 +92,14 @@ export default function AutopsyPanel({ candidates }: { candidates: AutopsyCandid
         </button>
       </div>
 
-      {error && <p className="mb-2 text-sm text-red-500">{error}</p>}
+      {error && (
+        <p className="mb-2 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
 
       {data ? (
-        <div>
+        <div aria-busy={loading}>
           {data.headline && (
             <div className="mb-3 flex flex-wrap items-center gap-3">
               <p className="text-base font-semibold">{data.headline}</p>
@@ -105,21 +114,29 @@ export default function AutopsyPanel({ candidates }: { candidates: AutopsyCandid
           <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Metric
               label={tr("autopsy.split")}
+              help={tr("autopsy.splitHelp")}
+              goodLabel={tr("autopsy.good")}
               value={fmtPct(data.positiveSplitPct)}
               good={data.positiveSplitPct != null && data.positiveSplitPct <= 2}
             />
             <Metric
               label={tr("autopsy.fade")}
+              help={tr("autopsy.fadeHelp")}
+              goodLabel={tr("autopsy.good")}
               value={fmtPct(data.fadePct)}
               good={data.fadePct != null && data.fadePct <= 3}
             />
             <Metric
               label={tr("autopsy.drift")}
+              help={tr("autopsy.driftHelp")}
+              goodLabel={tr("autopsy.good")}
               value={fmtPct(data.hrDriftPct)}
               good={data.hrDriftPct != null && data.hrDriftPct <= 5}
             />
             <Metric
               label={tr("autopsy.regularity")}
+              help={tr("autopsy.regularityHelp")}
+              goodLabel={tr("autopsy.good")}
               value={fmtPct(data.paceCvPct)}
               good={data.paceCvPct != null && data.paceCvPct <= 4}
             />
@@ -153,15 +170,32 @@ function Metric({
   label,
   value,
   good,
+  help,
+  goodLabel,
 }: {
   label: string;
   value: string;
   good: boolean;
+  help: string;
+  goodLabel: string;
 }) {
   return (
-    <div className="rounded-lg border border-border p-2.5">
-      <div className="text-[11px] text-muted">{label}</div>
-      <div className={`text-base font-bold ${good ? "text-green-600" : ""}`}>{value}</div>
+    <div className="rounded-lg border border-border p-2.5" title={help}>
+      <div className="text-xs text-muted">{label}</div>
+      <div
+        className={`flex items-center gap-1 text-base font-bold ${
+          good ? "text-green-700" : ""
+        }`}
+      >
+        {/* segnale non solo cromatico (WCAG 1.4.1): icona + etichetta per SR */}
+        {good && (
+          <>
+            <Icon name="check" size={15} />
+            <span className="sr-only">{goodLabel}: </span>
+          </>
+        )}
+        {value}
+      </div>
     </div>
   );
 }
