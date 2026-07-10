@@ -8,11 +8,16 @@ export interface Pair {
   y: number;
 }
 
-/** Coefficiente di correlazione di Pearson. Null se <5 coppie o varianza nulla. */
+// Soglia minima di abbinamenti per una correlazione. Con pochi punti (es. 5) una
+// |r| alta è facilmente spuria: 8 riduce i falsi positivi prima di calibrare il
+// piano o mostrare la relazione all'atleta.
+export const MIN_PAIRS = 8;
+
+/** Coefficiente di correlazione di Pearson. Null se <MIN_PAIRS coppie o varianza nulla. */
 export function pearson(pairs: Pair[]): number | null {
   const pts = pairs.filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
   const n = pts.length;
-  if (n < 5) return null;
+  if (n < MIN_PAIRS) return null;
   const mx = pts.reduce((s, p) => s + p.x, 0) / n;
   const my = pts.reduce((s, p) => s + p.y, 0) / n;
   let sxy = 0;

@@ -2,36 +2,27 @@ import { describe, it, expect } from "vitest";
 import { pearson, strength, round2, type Pair } from "./subjectiveMath";
 
 describe("pearson", () => {
-  it("null con meno di 5 coppie", () => {
-    const p: Pair[] = [
-      { x: 1, y: 1 },
-      { x: 2, y: 2 },
-      { x: 3, y: 3 },
-      { x: 4, y: 4 },
-    ];
+  it("null con meno di MIN_PAIRS (8) coppie", () => {
+    const p: Pair[] = [1, 2, 3, 4, 5, 6, 7].map((v) => ({ x: v, y: 2 * v + 1 }));
+    expect(p.length).toBeLessThan(8);
     expect(pearson(p)).toBeNull();
   });
   it("+1 su relazione lineare crescente perfetta", () => {
-    const p: Pair[] = [1, 2, 3, 4, 5].map((v) => ({ x: v, y: 2 * v + 1 }));
+    const p: Pair[] = [1, 2, 3, 4, 5, 6, 7, 8].map((v) => ({ x: v, y: 2 * v + 1 }));
     expect(pearson(p)!).toBeCloseTo(1, 6);
   });
   it("-1 su relazione lineare decrescente perfetta", () => {
-    const p: Pair[] = [1, 2, 3, 4, 5].map((v) => ({ x: v, y: -3 * v }));
+    const p: Pair[] = [1, 2, 3, 4, 5, 6, 7, 8].map((v) => ({ x: v, y: -3 * v }));
     expect(pearson(p)!).toBeCloseTo(-1, 6);
   });
   it("null se una variabile è costante (nessuna varianza)", () => {
-    const p: Pair[] = [1, 2, 3, 4, 5].map((v) => ({ x: v, y: 7 }));
+    const p: Pair[] = [1, 2, 3, 4, 5, 6, 7, 8].map((v) => ({ x: v, y: 7 }));
     expect(pearson(p)).toBeNull();
   });
   it("ignora le coppie non finite", () => {
-    const p: Pair[] = [
-      { x: 1, y: 2 },
-      { x: 2, y: 4 },
-      { x: NaN, y: 5 },
-      { x: 3, y: 6 },
-      { x: 4, y: 8 },
-      { x: 5, y: 10 },
-    ];
+    // 8 coppie finite + 1 non finita: deve restare sopra soglia e correlare a +1.
+    const p: Pair[] = [1, 2, 3, 4, 5, 6, 7, 8].map((v) => ({ x: v, y: 2 * v }));
+    p.splice(3, 0, { x: NaN, y: 5 });
     expect(pearson(p)!).toBeCloseTo(1, 6);
   });
 });

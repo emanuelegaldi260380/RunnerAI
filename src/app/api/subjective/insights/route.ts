@@ -11,7 +11,10 @@ export async function GET() {
   }
   try {
     const mapping = await computeSubjectiveMapping(session.user.id);
-    return NextResponse.json({ ok: true, ...mapping });
+    // Non mostrare all'atleta le correlazioni deboli: sono troppo fragili per
+    // agire, coerentemente con il blocco iniettato nel prompt del piano.
+    const insights = mapping.insights.filter((i) => i.strength !== "weak");
+    return NextResponse.json({ ok: true, ...mapping, insights });
   } catch (e) {
     logger.error("Mappatura soggettiva fallita", e);
     return NextResponse.json({ error: "Calcolo fallito." }, { status: 500 });
