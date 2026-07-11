@@ -13,6 +13,7 @@ import { runWithUser } from "@/lib/requestContext";
 import { rateLimit } from "@/lib/rateLimit";
 import { logger } from "@/lib/logger";
 import { extractActivityFromImages } from "@/lib/services/ingest";
+import { normalizeForVision } from "@/lib/services/imagePrep";
 import { storageConfigured, putObject } from "@/lib/storage";
 import type { ImageInput } from "@/lib/llm/types";
 
@@ -122,7 +123,10 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-    images.push({ base64: buf.toString("base64"), mediaType });
+    // Alla vision inviamo la versione entro i limiti dimensionali; su storage
+    // resta l'originale caricato dall'utente come riferimento.
+    const visionBuf = await normalizeForVision(buf);
+    images.push({ base64: visionBuf.toString("base64"), mediaType });
 
     const fname = `${crypto.randomUUID()}${extFor(mediaType)}`;
     // In produzione: storage oggetti S3-compatibile. In sviluppo: filesystem locale.
